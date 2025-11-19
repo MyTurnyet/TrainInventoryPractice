@@ -116,7 +116,6 @@ public class MaintenanceLogRepository {
         }
     }
 
-    // vague name
     public List<MaintenanceLog> findByItem(Long itemId) {
         List<MaintenanceLog> all = findAll();
         List<MaintenanceLog> result = new ArrayList<>();

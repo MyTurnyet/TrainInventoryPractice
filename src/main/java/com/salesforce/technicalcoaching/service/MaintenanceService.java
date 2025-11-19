@@ -14,7 +14,6 @@ import java.util.List;
 @Service
 public class MaintenanceService {
 
-    // tight coupling
     private MaintenanceLogRepository repo = new MaintenanceLogRepository();
     private LocomotiveRepository locoRepo = new LocomotiveRepository();
     private RollingStockRepository rsRepo = new RollingStockRepository();
@@ -35,9 +34,7 @@ public class MaintenanceService {
         repo.deleteById(id);
     }
 
-    // long method with multiple responsibilities
     public void updateItemStatus(Long itemId, MaintenanceStatus status) {
-        // check if it's a locomotive
         Locomotive l = locoRepo.findById(itemId);
         if (l != null) {
             l.maintenanceStatus = status;
@@ -45,7 +42,6 @@ public class MaintenanceService {
             return;
         }
 
-        // check if it's rolling stock
         RollingStock rs = rsRepo.findById(itemId);
         if (rs != null) {
             rs.maintenanceStatus = status;

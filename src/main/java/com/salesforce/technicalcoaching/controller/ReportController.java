@@ -12,7 +12,6 @@ import java.util.Map;
 @RequestMapping("/api/reports")
 public class ReportController {
 
-    // tight coupling
     private ReportService service = new ReportService();
 
     @GetMapping("/summary")

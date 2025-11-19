@@ -16,12 +16,10 @@ import java.util.Map;
 @Service
 public class LocomotiveService {
 
-    // tight coupling - direct instantiation
     private LocomotiveRepository repo = new LocomotiveRepository();
     private MaintenanceLogRepository logRepo = new MaintenanceLogRepository();
 
     public Locomotive create(Locomotive l) {
-        // no validation
         return repo.save(l);
     }
 
@@ -41,12 +39,10 @@ public class LocomotiveService {
         repo.deleteById(id);
     }
 
-    // long method with multiple responsibilities
     public Map<String, Object> search(String manufacturer, Scale scale, MaintenanceStatus status) {
         List<Locomotive> data = repo.findAll();
         List<Locomotive> temp = new ArrayList<>();
 
-        // poor logic
         for (int i = 0; i < data.size(); i++) {
             boolean match = true;
             if (manufacturer != null && !manufacturer.isEmpty()) {
@@ -69,7 +65,6 @@ public class LocomotiveService {
             }
         }
 
-        // build response with magic numbers
         Map<String, Object> result = new HashMap<>();
         result.put("results", temp);
         result.put("total", temp.size());
@@ -78,7 +73,6 @@ public class LocomotiveService {
         return result;
     }
 
-    // method doing too much
     public Map<String, Object> getWithLogs(Long id) {
         Locomotive l = repo.findById(id);
         if (l == null) {

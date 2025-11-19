@@ -19,7 +19,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class LocomotiveControllerTest {
 
-    // tight coupling - not using MockMvc
     private LocomotiveController controller = new LocomotiveController();
 
     @BeforeEach

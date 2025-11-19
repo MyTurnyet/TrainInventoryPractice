@@ -16,11 +16,9 @@ import java.util.Map;
 @Service
 public class ReportService {
 
-    // tight coupling
     private LocomotiveRepository locoRepo = new LocomotiveRepository();
     private RollingStockRepository rsRepo = new RollingStockRepository();
 
-    // long method with multiple responsibilities and poor variable names
     public Map<String, Object> getSummary() {
         List<Locomotive> list1 = locoRepo.findAll();
         List<RollingStock> list2 = rsRepo.findAll();
@@ -29,7 +27,6 @@ public class ReportService {
         int locoCount = list1.size();
         int rsCount = list2.size();
 
-        // calculate by scale - duplicate logic
         Map<Scale, Integer> scaleMap = new HashMap<>();
         for (int i = 0; i < list1.size(); i++) {
             Scale s = list1.get(i).scale;
@@ -48,7 +45,6 @@ public class ReportService {
             }
         }
 
-        // calculate by status - duplicate logic again
         Map<MaintenanceStatus, Integer> statusMap = new HashMap<>();
         for (int i = 0; i < list1.size(); i++) {
             MaintenanceStatus st = list1.get(i).maintenanceStatus;
@@ -67,7 +63,6 @@ public class ReportService {
             }
         }
 
-        // calculate total value
         BigDecimal totalValue = new BigDecimal("0");
         for (int i = 0; i < list1.size(); i++) {
             if (list1.get(i).currentValue != null) {

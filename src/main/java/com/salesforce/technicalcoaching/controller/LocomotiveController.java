@@ -14,7 +14,6 @@ import java.util.Map;
 @RequestMapping("/api/locomotives")
 public class LocomotiveController {
 
-    // tight coupling - direct instantiation
     private LocomotiveService service = new LocomotiveService();
 
     @PostMapping
@@ -62,7 +61,6 @@ public class LocomotiveController {
 
     @GetMapping("/scale/{scale}")
     public ResponseEntity<List<Locomotive>> getByScale(@PathVariable Scale scale) {
-        // duplicate call pattern
         String m = null;
         Map<String, Object> result = service.search(m, scale, null);
         return ResponseEntity.ok((List<Locomotive>) result.get("results"));

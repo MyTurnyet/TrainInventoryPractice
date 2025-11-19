@@ -14,7 +14,6 @@ import java.util.Map;
 @RequestMapping("/api/rolling-stock")
 public class RollingStockController {
 
-    // tight coupling
     private RollingStockService service = new RollingStockService();
 
     @PostMapping

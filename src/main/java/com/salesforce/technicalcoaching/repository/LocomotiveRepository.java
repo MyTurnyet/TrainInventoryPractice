@@ -18,7 +18,6 @@ import java.util.List;
 @Repository
 public class LocomotiveRepository {
 
-    // hardcoded path - bad practice
     private String path = "data/locomotives.json";
 
     public List<Locomotive> findAll() {
@@ -40,7 +39,6 @@ public class LocomotiveRepository {
     }
 
     public Locomotive findById(Long id) {
-        // duplicate code from findAll
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new JavaTimeModule());
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
@@ -64,7 +62,6 @@ public class LocomotiveRepository {
     }
 
     public Locomotive save(Locomotive l) {
-        // duplicate code again
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new JavaTimeModule());
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
@@ -81,7 +78,6 @@ public class LocomotiveRepository {
                 f.createNewFile();
             }
 
-            // generate id - magic number logic
             long max = 0;
             for (int i = 0; i < list.size(); i++) {
                 if (list.get(i).id > max) {
@@ -111,7 +107,6 @@ public class LocomotiveRepository {
             File f = new File(path);
             List<Locomotive> list = mapper.readValue(f, new TypeReference<List<Locomotive>>() {});
 
-            // find and update
             for (int i = 0; i < list.size(); i++) {
                 if (list.get(i).id.equals(id)) {
                     l.id = id;
@@ -151,7 +146,6 @@ public class LocomotiveRepository {
         }
     }
 
-    // poor variable names
     public List<Locomotive> findByScale(Scale s) {
         List<Locomotive> all = findAll();
         List<Locomotive> result = new ArrayList<>();

@@ -13,7 +13,6 @@ import java.util.Map;
 @RequestMapping("/api/maintenance")
 public class MaintenanceController {
 
-    // tight coupling
     private MaintenanceService service = new MaintenanceService();
 
     @PostMapping

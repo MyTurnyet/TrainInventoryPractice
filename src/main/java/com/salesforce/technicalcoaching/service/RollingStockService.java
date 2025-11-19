@@ -16,7 +16,6 @@ import java.util.Map;
 @Service
 public class RollingStockService {
 
-    // tight coupling
     private RollingStockRepository repo = new RollingStockRepository();
     private MaintenanceLogRepository logRepo = new MaintenanceLogRepository();
 
@@ -40,7 +39,6 @@ public class RollingStockService {
         repo.deleteById(id);
     }
 
-    // duplicate logic from LocomotiveService
     public Map<String, Object> search(String manufacturer, Scale scale, AARType aarType) {
         List<RollingStock> data = repo.findAll();
         List<RollingStock> temp = new ArrayList<>();
@@ -75,7 +73,6 @@ public class RollingStockService {
         return result;
     }
 
-    // duplicated logic from LocomotiveService
     public Map<String, Object> getWithLogs(Long id) {
         RollingStock rs = repo.findById(id);
         if (rs == null) {
