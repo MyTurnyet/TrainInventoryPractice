@@ -177,12 +177,39 @@ This document outlines potential refactoring exercises that can be practiced wit
 
 ## Testing and Testability Exercises
 
-### 24. Improve Testability with Dependency Injection
+### 24. Identify and Remove Mock-Only Tests
+**Current Issue:** Some tests only verify mock behavior, not actual business logic
+**Files:**
+- `controller/validation/InventoryValidationTest.java`
+- `service/helper/DataIntegrityTest.java`
+- `repository/util/RepositoryBehaviorTest.java`
+**Concepts:** Test Smells, Test Effectiveness, Red-Green-Refactor
+**Problem:** These tests appear to validate functionality but only verify that mocks return what they were configured to return
+**Exercise:**
+1. Read each test and identify why it's not testing real behavior
+2. Delete these tests (they provide zero value)
+3. Consider: Would these tests fail if you broke the production code?
+**Learning:** Good tests verify production code behavior, not test infrastructure
+
+### 25. Improve Testability with Dependency Injection
 **Related to:** Exercise #3
 **Concepts:** Test Doubles, Interface Segregation
 **Benefit:** Easier to inject hand-rolled fakes in tests
 
-### 25. Extract File I/O for Better Testing
+### 26. Replace Mockito with Hand-Rolled Fakes
+**Current Issue:** Tests use Mockito mocks instead of simple test implementations
+**Files:** All test files using `@Mock` and `@InjectMocks`
+**Concepts:** Test Doubles, Explicit over Magic, Simplicity
+**Refactoring:**
+1. First complete Exercise #24 (identify and remove mock-only tests)
+2. Complete Exercise #3 (add interfaces and dependency injection)
+3. Create simple fake implementations of repository/service interfaces
+4. Replace `@Mock` annotations with actual fake objects
+5. Remove Mockito dependency from tests
+**Benefits:** Simpler tests, explicit behavior, no mocking framework magic, easier to debug
+**Learning:** Recognize tests that only verify mocks return what they were configured to return
+
+### 27. Extract File I/O for Better Testing
 **Current Issue:** Repository classes directly handle file operations
 **Concepts:** Separation of Concerns, Single Responsibility
 **Refactoring:** Create JsonFileManager utility per design document
@@ -191,17 +218,17 @@ This document outlines potential refactoring exercises that can be practiced wit
 
 ## Design Pattern Exercises
 
-### 26. Apply Builder Pattern
+### 28. Apply Builder Pattern
 **Suggested Area:** Model classes with many fields
 **Concepts:** Creational Patterns, Fluent API
 **Refactoring:** Add Builder inner classes to model objects
 
-### 27. Apply Strategy Pattern for Filtering
+### 29. Apply Strategy Pattern for Filtering
 **Current Issue:** Conditional logic for different filter types
 **Concepts:** Behavioral Patterns, Open/Closed Principle
 **Refactoring:** Create filter strategy implementations
 
-### 28. Apply Factory Pattern for ObjectMapper
+### 30. Apply Factory Pattern for ObjectMapper
 **Related to:** Exercise #4
 **Concepts:** Creational Patterns
 **Refactoring:** Create ObjectMapperFactory
@@ -210,7 +237,7 @@ This document outlines potential refactoring exercises that can be practiced wit
 
 ## Modern Java Exercises
 
-### 29. Use Records for Immutable DTOs
+### 31. Use Records for Immutable DTOs
 **Suggested Area:** Request/Response classes
 **Concepts:** Java 14+ Features, Immutability
 **Refactoring:** Convert DTOs to Java Records
@@ -233,11 +260,13 @@ This document outlines potential refactoring exercises that can be practiced wit
 5. Convert to Streams (#17)
 
 ### Advanced Path
-1. Create Base Repository (#5)
-2. Extract Common Base Class (#20)
-3. Apply Template Method Pattern (#5)
-4. Add Custom Exceptions (#12, #13)
-5. Create JsonFileManager (#25)
+1. Identify and Remove Mock-Only Tests (#24)
+2. Create Base Repository (#5)
+3. Extract Common Base Class (#20)
+4. Apply Template Method Pattern (#5)
+5. Add Custom Exceptions (#12, #13)
+6. Create JsonFileManager (#27)
+7. Replace Mockito with Hand-Rolled Fakes (#26)
 
 ### Comprehensive Refactoring Path
 Work through exercises in numerical order for a complete transformation from the current implementation to the full design outlined in `class-design.md`.
