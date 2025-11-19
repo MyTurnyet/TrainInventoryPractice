@@ -48,7 +48,6 @@ public class ReportControllerTest {
 
     @Test
     public void test1() {
-        // poor name, long test
         Locomotive l1 = new Locomotive();
         l1.manufacturer = "Test1";
         l1.scale = Scale.HO;

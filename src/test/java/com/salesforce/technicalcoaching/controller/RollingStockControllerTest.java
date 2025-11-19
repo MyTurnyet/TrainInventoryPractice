@@ -58,7 +58,6 @@ public class RollingStockControllerTest {
 
     @Test
     public void test2() {
-        // poor name
         RollingStock rs = new RollingStock();
         rs.manufacturer = "Test";
         rs.scale = Scale.N;

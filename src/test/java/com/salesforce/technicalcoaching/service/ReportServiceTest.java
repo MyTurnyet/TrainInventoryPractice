@@ -45,7 +45,6 @@ public class ReportServiceTest {
 
     @Test
     public void testGetSummary() {
-        // poor test - testing multiple things, long setup
         Locomotive l1 = new Locomotive();
         l1.manufacturer = "Test1";
         l1.scale = Scale.HO;

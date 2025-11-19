@@ -18,7 +18,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class LocomotiveServiceTest {
 
-    // tight coupling
     private LocomotiveService service = new LocomotiveService();
 
     @BeforeEach
@@ -61,7 +60,6 @@ public class LocomotiveServiceTest {
 
     @Test
     public void test2() {
-        // vague name, testing multiple things
         Locomotive l = new Locomotive();
         l.manufacturer = "Test";
         l.scale = Scale.HO;
@@ -97,7 +95,6 @@ public class LocomotiveServiceTest {
 
     @Test
     public void testSearch() {
-        // duplicate setup
         Locomotive l1 = new Locomotive();
         l1.manufacturer = "Athearn";
         l1.scale = Scale.HO;

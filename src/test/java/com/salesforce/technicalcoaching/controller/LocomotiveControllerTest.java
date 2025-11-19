@@ -48,7 +48,6 @@ public class LocomotiveControllerTest {
 
     @Test
     public void test1() {
-        // vague name, testing multiple things
         Locomotive l = new Locomotive();
         l.manufacturer = "Test";
         l.scale = Scale.HO;
@@ -122,7 +121,6 @@ public class LocomotiveControllerTest {
 
     @Test
     public void testSearch() {
-        // duplicate setup code
         Locomotive l1 = new Locomotive();
         l1.manufacturer = "Athearn";
         l1.scale = Scale.HO;

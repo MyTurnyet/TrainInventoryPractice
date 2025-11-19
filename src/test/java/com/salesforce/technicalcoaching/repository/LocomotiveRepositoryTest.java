@@ -16,7 +16,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class LocomotiveRepositoryTest {
 
-    // tight coupling - direct instantiation
     private LocomotiveRepository repo = new LocomotiveRepository();
 
     @BeforeEach
@@ -39,7 +38,6 @@ public class LocomotiveRepositoryTest {
 
     @Test
     public void testSaveAndFindAll() {
-        // poor test - testing multiple things at once
         Locomotive l = new Locomotive();
         l.manufacturer = "Test";
         l.modelNumber = "123";
@@ -57,7 +55,6 @@ public class LocomotiveRepositoryTest {
 
     @Test
     public void test2() {
-        // vague test name
         Locomotive l1 = new Locomotive();
         l1.manufacturer = "Athearn";
         l1.scale = Scale.HO;
@@ -126,7 +123,6 @@ public class LocomotiveRepositoryTest {
 
     @Test
     public void testFindByScale() {
-        // duplicate setup code
         Locomotive l1 = new Locomotive();
         l1.manufacturer = "Test1";
         l1.scale = Scale.HO;

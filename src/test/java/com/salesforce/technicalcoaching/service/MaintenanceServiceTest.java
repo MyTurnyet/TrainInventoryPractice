@@ -79,7 +79,6 @@ public class MaintenanceServiceTest {
 
     @Test
     public void testUpdateItemStatus() {
-        // test with actual locomotive
         Locomotive l = new Locomotive();
         l.manufacturer = "Test";
         l.scale = Scale.HO;

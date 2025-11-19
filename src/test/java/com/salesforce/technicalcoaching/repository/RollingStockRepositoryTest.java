@@ -71,7 +71,6 @@ public class RollingStockRepositoryTest {
 
     @Test
     public void testFindByAarType() {
-        // duplicate code from previous test
         RollingStock rs1 = new RollingStock();
         rs1.manufacturer = "Test1";
         rs1.scale = Scale.HO;

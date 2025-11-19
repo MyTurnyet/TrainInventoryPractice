@@ -91,7 +91,6 @@ public class RollingStockServiceTest {
 
     @Test
     public void testGetByAarType() {
-        // duplicate setup code
         RollingStock rs1 = new RollingStock();
         rs1.manufacturer = "Test1";
         rs1.scale = Scale.HO;

@@ -47,7 +47,6 @@ public class MaintenanceLogRepositoryTest {
 
     @Test
     public void testFindByItem() {
-        // poor variable names
         MaintenanceLog l1 = new MaintenanceLog();
         l1.inventoryItemId = 1L;
         l1.maintenanceDate = LocalDate.now();
