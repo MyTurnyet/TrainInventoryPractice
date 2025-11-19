@@ -49,6 +49,15 @@ The application will start on the default Spring Boot port (8080).
 ./gradlew test
 ```
 
+### Continuous Integration
+
+This project uses GitHub Actions to automatically run tests on every commit and pull request. The workflow configuration can be found in [`.github/workflows/test.yml`](.github/workflows/test.yml).
+
+The CI pipeline will:
+- Run all tests using Gradle
+- Report test results in the GitHub Actions UI
+- Fail the build if any tests fail
+
 ## Project Structure
 
 - `model/` - Domain models for Locomotive, RollingStock, and MaintenanceLog
