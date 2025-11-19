@@ -65,6 +65,6 @@ The application provides REST endpoints for:
 - Maintenance log operations
 - Inventory reporting
 
-## License
+## Project Usage
 
-This is a practice project for software craftsmanship exercises.
+This is a practice project for software craftsmanship exercises.  A description of those exercises is found in the [internal-documents/refactoring-exercises.md](./internal-documents/refactoring-exercises.md) file.
