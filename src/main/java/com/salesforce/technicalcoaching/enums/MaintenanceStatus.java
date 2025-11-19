@@ -1,5 +1,0 @@
-package com.salesforce.technicalcoaching.enums;
-
-public enum MaintenanceStatus {
-    OPERATIONAL, NEEDS_MAINTENANCE, IN_MAINTENANCE, OUT_OF_SERVICE, RETIRED
-}
