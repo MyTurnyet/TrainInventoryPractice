@@ -19,13 +19,6 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Repository test with real file I/O (ANTI-PATTERN for teaching purposes)
- * - Uses real JSON files
- * - Slow execution
- * - Tests can interfere with each other
- * - Requires file system cleanup
- */
 class LocomotiveRepositoryTest {
 
     private LocomotiveRepository repository;

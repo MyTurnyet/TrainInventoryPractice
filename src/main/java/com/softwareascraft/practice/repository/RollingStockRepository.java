@@ -13,21 +13,12 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-/**
- * Repository for RollingStock entities (ANTI-PATTERN for teaching purposes)
- * - Hard-coded file path
- * - Direct calls to static utility methods
- * - No interface abstraction
- * - Cannot be easily mocked or substituted
- */
 public class RollingStockRepository {
 
-    // Hard-coded file name (ANTI-PATTERN)
     private static final String FILE_NAME = "rolling-stock.json";
     private static final String ENTITY_TYPE = "rolling_stock";
 
     public RollingStockRepository() {
-        // Initialize ID counter from existing data
         List<RollingStock> existing = findAll();
         IdGenerator.initializeCounter(ENTITY_TYPE, existing);
     }
@@ -35,13 +26,11 @@ public class RollingStockRepository {
     public RollingStock save(RollingStock rollingStock) {
         List<RollingStock> rollingStocks = findAll();
 
-        // Generate new ID using static utility (ANTI-PATTERN)
         Long newId = IdGenerator.generateId(ENTITY_TYPE);
         rollingStock.setId(newId);
 
         rollingStocks.add(rollingStock);
 
-        // Call static utility method directly (ANTI-PATTERN)
         JsonFileManager.writeToFile(FILE_NAME, rollingStocks);
 
         return rollingStock;
@@ -55,7 +44,6 @@ public class RollingStockRepository {
     }
 
     public List<RollingStock> findAll() {
-        // Call static utility method directly (ANTI-PATTERN)
         return JsonFileManager.readFromFile(FILE_NAME, new TypeReference<List<RollingStock>>() {});
     }
 
@@ -76,7 +64,6 @@ public class RollingStockRepository {
             throw new ResourceNotFoundException("RollingStock", id);
         }
 
-        // Call static utility method directly (ANTI-PATTERN)
         JsonFileManager.writeToFile(FILE_NAME, rollingStocks);
 
         return updatedRollingStock;
@@ -91,7 +78,6 @@ public class RollingStockRepository {
             throw new ResourceNotFoundException("RollingStock", id);
         }
 
-        // Call static utility method directly (ANTI-PATTERN)
         JsonFileManager.writeToFile(FILE_NAME, rollingStocks);
     }
 

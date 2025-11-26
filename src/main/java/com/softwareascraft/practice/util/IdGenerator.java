@@ -4,19 +4,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Static utility class for generating IDs (ANTI-PATTERN for teaching purposes)
- * - Uses static state (HashMap)
- * - Not thread-safe
- * - Cannot be mocked in tests
- * - No abstraction or dependency injection
- */
 public class IdGenerator {
 
-    // Static state - maintains ID counters (ANTI-PATTERN)
     private static final Map<String, Long> idCounters = new HashMap<>();
 
-    // Private constructor to prevent instantiation
     private IdGenerator() {
         throw new UnsupportedOperationException("Utility class");
     }

@@ -12,21 +12,12 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-/**
- * Repository for Locomotive entities (ANTI-PATTERN for teaching purposes)
- * - Hard-coded file path
- * - Direct calls to static utility methods
- * - No interface abstraction
- * - Cannot be easily mocked or substituted
- */
 public class LocomotiveRepository {
 
-    // Hard-coded file name (ANTI-PATTERN)
     private static final String FILE_NAME = "locomotives.json";
     private static final String ENTITY_TYPE = "locomotive";
 
     public LocomotiveRepository() {
-        // Initialize ID counter from existing data
         List<Locomotive> existing = findAll();
         IdGenerator.initializeCounter(ENTITY_TYPE, existing);
     }
@@ -34,13 +25,11 @@ public class LocomotiveRepository {
     public Locomotive save(Locomotive locomotive) {
         List<Locomotive> locomotives = findAll();
 
-        // Generate new ID using static utility (ANTI-PATTERN)
         Long newId = IdGenerator.generateId(ENTITY_TYPE);
         locomotive.setId(newId);
 
         locomotives.add(locomotive);
 
-        // Call static utility method directly (ANTI-PATTERN)
         JsonFileManager.writeToFile(FILE_NAME, locomotives);
 
         return locomotive;
@@ -54,7 +43,6 @@ public class LocomotiveRepository {
     }
 
     public List<Locomotive> findAll() {
-        // Call static utility method directly (ANTI-PATTERN)
         return JsonFileManager.readFromFile(FILE_NAME, new TypeReference<List<Locomotive>>() {});
     }
 
@@ -75,7 +63,6 @@ public class LocomotiveRepository {
             throw new ResourceNotFoundException("Locomotive", id);
         }
 
-        // Call static utility method directly (ANTI-PATTERN)
         JsonFileManager.writeToFile(FILE_NAME, locomotives);
 
         return updatedLocomotive;
@@ -90,7 +77,6 @@ public class LocomotiveRepository {
             throw new ResourceNotFoundException("Locomotive", id);
         }
 
-        // Call static utility method directly (ANTI-PATTERN)
         JsonFileManager.writeToFile(FILE_NAME, locomotives);
     }
 

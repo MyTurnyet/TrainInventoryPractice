@@ -10,21 +10,13 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/**
- * REST Controller for Maintenance endpoints (ANTI-PATTERN for teaching purposes)
- * - Creates service with 'new' instead of @Autowired
- * - Tightly coupled to concrete service implementation
- * - Cannot be easily tested with mocked dependencies
- */
 @RestController
 @RequestMapping("/api/maintenance")
 public class MaintenanceController {
 
-    // Direct instantiation - ANTI-PATTERN (should use @Autowired)
     private final MaintenanceService maintenanceService;
 
     public MaintenanceController() {
-        // Creating dependency with 'new' instead of injection (ANTI-PATTERN)
         this.maintenanceService = new MaintenanceService();
     }
 

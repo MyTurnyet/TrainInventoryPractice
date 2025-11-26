@@ -14,23 +14,13 @@ import com.softwareascraft.practice.util.ModelMapper;
 
 import java.util.List;
 
-/**
- * Service for Maintenance business logic (ANTI-PATTERN for teaching purposes)
- * - Creates repositories with 'new' in field declarations
- * - Calls static ModelMapper methods
- * - No interface abstraction
- * - Multiple hard-coded dependencies
- * - Tightly coupled to concrete repository implementations
- */
 public class MaintenanceService {
 
-    // Direct instantiation in field declarations - ANTI-PATTERN
     private final MaintenanceLogRepository maintenanceLogRepository = new MaintenanceLogRepository();
     private final LocomotiveRepository locomotiveRepository = new LocomotiveRepository();
     private final RollingStockRepository rollingStockRepository = new RollingStockRepository();
 
     public MaintenanceLogResponse createMaintenanceLog(CreateMaintenanceLogRequest request) {
-        // Verify the inventory item exists (checking both types)
         Long itemId = request.getInventoryItemId();
         boolean itemExists = locomotiveRepository.findById(itemId).isPresent() ||
                            rollingStockRepository.findById(itemId).isPresent();
@@ -39,12 +29,10 @@ public class MaintenanceService {
             throw new ResourceNotFoundException("Inventory item with id " + itemId + " not found");
         }
 
-        // Call static mapper method directly (ANTI-PATTERN)
         MaintenanceLog log = ModelMapper.toMaintenanceLog(request);
 
         MaintenanceLog saved = maintenanceLogRepository.save(log);
 
-        // Call static mapper method directly (ANTI-PATTERN)
         return ModelMapper.toMaintenanceLogResponse(saved);
     }
 
@@ -52,19 +40,16 @@ public class MaintenanceService {
         MaintenanceLog log = maintenanceLogRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("MaintenanceLog", id));
 
-        // Call static mapper method directly (ANTI-PATTERN)
         return ModelMapper.toMaintenanceLogResponse(log);
     }
 
     public List<MaintenanceLogResponse> getMaintenanceLogsByItemId(Long itemId) {
         List<MaintenanceLog> logs = maintenanceLogRepository.findByInventoryItemId(itemId);
 
-        // Call static mapper method directly (ANTI-PATTERN)
         return ModelMapper.toMaintenanceLogResponseList(logs);
     }
 
     public void updateMaintenanceStatus(Long itemId, MaintenanceStatus status) {
-        // Try to find and update in locomotives first
         try {
             Locomotive locomotive = locomotiveRepository.findById(itemId)
                     .orElse(null);
@@ -74,10 +59,8 @@ public class MaintenanceService {
                 return;
             }
         } catch (Exception e) {
-            // Continue to rolling stock
         }
 
-        // Try to find and update in rolling stock
         RollingStock rollingStock = rollingStockRepository.findById(itemId)
                 .orElseThrow(() -> new ResourceNotFoundException("Inventory item with id " + itemId + " not found"));
 

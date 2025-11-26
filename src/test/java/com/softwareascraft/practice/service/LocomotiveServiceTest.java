@@ -20,13 +20,6 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Service test with real repository and file I/O (ANTI-PATTERN for teaching purposes)
- * - Uses real repository instead of mocks
- * - Slow execution due to file operations
- * - Hard to isolate failures
- * - Requires file system cleanup
- */
 class LocomotiveServiceTest {
 
     private LocomotiveService service;

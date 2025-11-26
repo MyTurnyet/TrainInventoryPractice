@@ -12,21 +12,12 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-/**
- * Repository for MaintenanceLog entities (ANTI-PATTERN for teaching purposes)
- * - Hard-coded file path
- * - Direct calls to static utility methods
- * - No interface abstraction
- * - Cannot be easily mocked or substituted
- */
 public class MaintenanceLogRepository {
 
-    // Hard-coded file name (ANTI-PATTERN)
     private static final String FILE_NAME = "maintenance-logs.json";
     private static final String ENTITY_TYPE = "maintenance_log";
 
     public MaintenanceLogRepository() {
-        // Initialize ID counter from existing data
         List<MaintenanceLog> existing = findAll();
         IdGenerator.initializeCounter(ENTITY_TYPE, existing);
     }
@@ -34,13 +25,11 @@ public class MaintenanceLogRepository {
     public MaintenanceLog save(MaintenanceLog log) {
         List<MaintenanceLog> logs = findAll();
 
-        // Generate new ID using static utility (ANTI-PATTERN)
         Long newId = IdGenerator.generateId(ENTITY_TYPE);
         log.setId(newId);
 
         logs.add(log);
 
-        // Call static utility method directly (ANTI-PATTERN)
         JsonFileManager.writeToFile(FILE_NAME, logs);
 
         return log;
@@ -54,7 +43,6 @@ public class MaintenanceLogRepository {
     }
 
     public List<MaintenanceLog> findAll() {
-        // Call static utility method directly (ANTI-PATTERN)
         return JsonFileManager.readFromFile(FILE_NAME, new TypeReference<List<MaintenanceLog>>() {});
     }
 
@@ -75,7 +63,6 @@ public class MaintenanceLogRepository {
             throw new ResourceNotFoundException("MaintenanceLog", id);
         }
 
-        // Call static utility method directly (ANTI-PATTERN)
         JsonFileManager.writeToFile(FILE_NAME, logs);
 
         return updatedLog;
@@ -90,7 +77,6 @@ public class MaintenanceLogRepository {
             throw new ResourceNotFoundException("MaintenanceLog", id);
         }
 
-        // Call static utility method directly (ANTI-PATTERN)
         JsonFileManager.writeToFile(FILE_NAME, logs);
     }
 

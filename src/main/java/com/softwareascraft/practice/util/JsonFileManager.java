@@ -11,20 +11,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Static utility class for JSON file operations (ANTI-PATTERN for teaching purposes)
- * - Cannot be mocked in tests
- * - Hard-coded file paths
- * - No abstraction or dependency injection
- */
 public class JsonFileManager {
 
-    // Hard-coded base directory path (ANTI-PATTERN)
     private static final String DATA_DIRECTORY = "data/";
 
     private static final ObjectMapper objectMapper = createObjectMapper();
 
-    // Private constructor to prevent instantiation
     private JsonFileManager() {
         throw new UnsupportedOperationException("Utility class");
     }

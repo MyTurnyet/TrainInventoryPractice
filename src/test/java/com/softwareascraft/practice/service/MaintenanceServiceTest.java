@@ -21,13 +21,6 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Service test with real repositories and file I/O (ANTI-PATTERN for teaching purposes)
- * - Uses real repositories instead of mocks
- * - Very slow and coupled (uses 3 different repositories)
- * - Hard to isolate failures
- * - Requires file system cleanup for multiple files
- */
 class MaintenanceServiceTest {
 
     private MaintenanceService service;

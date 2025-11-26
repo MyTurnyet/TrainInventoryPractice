@@ -13,16 +13,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * Static utility class for mapping between entities and DTOs (ANTI-PATTERN for teaching purposes)
- * - All static methods
- * - Cannot be mocked in tests
- * - No configuration or customization possible
- * - Duplicated mapping logic
- */
 public class ModelMapper {
 
-    // Private constructor to prevent instantiation
     private ModelMapper() {
         throw new UnsupportedOperationException("Utility class");
     }

@@ -28,13 +28,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * Controller test with real service and repository (ANTI-PATTERN for teaching purposes)
- * - Cannot easily mock the service (created with 'new' in controller)
- * - Full integration test touching file system
- * - Slow execution
- * - Hard to test edge cases
- */
 @SpringBootTest
 @AutoConfigureMockMvc
 class MaintenanceControllerTest {

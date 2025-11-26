@@ -10,21 +10,13 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/**
- * REST Controller for Locomotive endpoints (ANTI-PATTERN for teaching purposes)
- * - Creates service with 'new' instead of @Autowired
- * - Tightly coupled to concrete service implementation
- * - Cannot be easily tested with mocked dependencies
- */
 @RestController
 @RequestMapping("/api/locomotives")
 public class LocomotiveController {
 
-    // Direct instantiation - ANTI-PATTERN (should use @Autowired)
     private final LocomotiveService locomotiveService;
 
     public LocomotiveController() {
-        // Creating dependency with 'new' instead of injection (ANTI-PATTERN)
         this.locomotiveService = new LocomotiveService();
     }
 
