@@ -1,76 +1,69 @@
 package com.softwareascraft.practice.controller;
 
-import com.softwareascraft.practice.enums.MaintenanceStatus;
-import com.softwareascraft.practice.enums.Scale;
-import com.softwareascraft.practice.model.Locomotive;
+import com.softwareascraft.practice.dto.request.CreateLocomotiveRequest;
+import com.softwareascraft.practice.dto.request.UpdateLocomotiveRequest;
+import com.softwareascraft.practice.dto.response.LocomotiveResponse;
 import com.softwareascraft.practice.service.LocomotiveService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
+/**
+ * REST Controller for Locomotive endpoints (ANTI-PATTERN for teaching purposes)
+ * - Creates service with 'new' instead of @Autowired
+ * - Tightly coupled to concrete service implementation
+ * - Cannot be easily tested with mocked dependencies
+ */
 @RestController
 @RequestMapping("/api/locomotives")
 public class LocomotiveController {
 
-    private LocomotiveService service = new LocomotiveService();
+    // Direct instantiation - ANTI-PATTERN (should use @Autowired)
+    private final LocomotiveService locomotiveService;
+
+    public LocomotiveController() {
+        // Creating dependency with 'new' instead of injection (ANTI-PATTERN)
+        this.locomotiveService = new LocomotiveService();
+    }
 
     @PostMapping
-    public ResponseEntity<Locomotive> create(@RequestBody Locomotive l) {
-        Locomotive result = service.create(l);
-        return ResponseEntity.ok(result);
+    public ResponseEntity<LocomotiveResponse> createLocomotive(@RequestBody CreateLocomotiveRequest request) {
+        LocomotiveResponse response = locomotiveService.createLocomotive(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> getById(@PathVariable Long id) {
-        Map<String, Object> result = service.getWithLogs(id);
-        if (result == null) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(result);
+    public ResponseEntity<LocomotiveResponse> getLocomotiveById(@PathVariable Long id) {
+        LocomotiveResponse response = locomotiveService.getLocomotiveById(id);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping
-    public ResponseEntity<List<Locomotive>> getAll() {
-        return ResponseEntity.ok(service.getAll());
+    public ResponseEntity<List<LocomotiveResponse>> getAllLocomotives() {
+        List<LocomotiveResponse> responses = locomotiveService.getAllLocomotives();
+        return ResponseEntity.ok(responses);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Locomotive> update(@PathVariable Long id, @RequestBody Locomotive l) {
-        Locomotive result = service.update(id, l);
-        if (result == null) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(result);
+    public ResponseEntity<LocomotiveResponse> updateLocomotive(
+            @PathVariable Long id,
+            @RequestBody UpdateLocomotiveRequest request) {
+        LocomotiveResponse response = locomotiveService.updateLocomotive(id, request);
+        return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        service.delete(id);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<Void> deleteLocomotive(@PathVariable Long id) {
+        locomotiveService.deleteLocomotive(id);
+        return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/search")
-    public ResponseEntity<Map<String, Object>> search(
-            @RequestParam(required = false) String manufacturer,
-            @RequestParam(required = false) Scale scale,
-            @RequestParam(required = false) MaintenanceStatus status) {
-        return ResponseEntity.ok(service.search(manufacturer, scale, status));
-    }
-
-    @GetMapping("/scale/{scale}")
-    public ResponseEntity<List<Locomotive>> getByScale(@PathVariable Scale scale) {
-        String m = null;
-        Map<String, Object> result = service.search(m, scale, null);
-        return ResponseEntity.ok((List<Locomotive>) result.get("results"));
-    }
-
-    @PutMapping("/{id}/status")
-    public ResponseEntity<Void> updateStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
-        String statusStr = body.get("status");
-        MaintenanceStatus status = MaintenanceStatus.valueOf(statusStr);
-        service.updateStatus(id, status);
-        return ResponseEntity.ok().build();
+    @GetMapping("/manufacturer/{manufacturer}")
+    public ResponseEntity<List<LocomotiveResponse>> getLocomotivesByManufacturer(
+            @PathVariable String manufacturer) {
+        List<LocomotiveResponse> responses = locomotiveService.getLocomotivesByManufacturer(manufacturer);
+        return ResponseEntity.ok(responses);
     }
 }

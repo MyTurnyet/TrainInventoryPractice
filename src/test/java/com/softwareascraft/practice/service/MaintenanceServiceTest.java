@@ -1,190 +1,210 @@
 package com.softwareascraft.practice.service;
 
+import com.softwareascraft.practice.dto.request.CreateMaintenanceLogRequest;
+import com.softwareascraft.practice.dto.response.MaintenanceLogResponse;
+import com.softwareascraft.practice.enums.LocomotiveType;
 import com.softwareascraft.practice.enums.MaintenanceStatus;
+import com.softwareascraft.practice.enums.PowerType;
+import com.softwareascraft.practice.enums.Scale;
+import com.softwareascraft.practice.exception.ResourceNotFoundException;
 import com.softwareascraft.practice.model.Locomotive;
-import com.softwareascraft.practice.model.MaintenanceLog;
-import com.softwareascraft.practice.model.RollingStock;
 import com.softwareascraft.practice.repository.LocomotiveRepository;
-import com.softwareascraft.practice.repository.MaintenanceLogRepository;
-import com.softwareascraft.practice.repository.RollingStockRepository;
+import com.softwareascraft.practice.util.IdGenerator;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.io.File;
+import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-@ExtendWith(MockitoExtension.class)
-public class MaintenanceServiceTest {
+/**
+ * Service test with real repositories and file I/O (ANTI-PATTERN for teaching purposes)
+ * - Uses real repositories instead of mocks
+ * - Very slow and coupled (uses 3 different repositories)
+ * - Hard to isolate failures
+ * - Requires file system cleanup for multiple files
+ */
+class MaintenanceServiceTest {
 
-    @Mock
-    private MaintenanceLogRepository repository;
-
-    @Mock
-    private LocomotiveRepository locomotiveRepository;
-
-    @Mock
-    private RollingStockRepository rollingStockRepository;
-
-    @InjectMocks
     private MaintenanceService service;
+    private LocomotiveRepository locomotiveRepository;
+    private static final String DATA_DIR = "data/";
 
     @BeforeEach
-    public void setup() {
-        // Mocks are initialized by @ExtendWith(MockitoExtension.class)
+    void setUp() {
+        IdGenerator.resetIdCounter("locomotive");
+        IdGenerator.resetIdCounter("rolling_stock");
+        IdGenerator.resetIdCounter("maintenance_log");
+        service = new MaintenanceService();
+        locomotiveRepository = new LocomotiveRepository();
+    }
+
+    @AfterEach
+    void tearDown() {
+        // Clean up all test files
+        deleteFileIfExists(DATA_DIR + "locomotives.json");
+        deleteFileIfExists(DATA_DIR + "rolling-stock.json");
+        deleteFileIfExists(DATA_DIR + "maintenance-logs.json");
+
+        IdGenerator.resetIdCounter("locomotive");
+        IdGenerator.resetIdCounter("rolling_stock");
+        IdGenerator.resetIdCounter("maintenance_log");
     }
 
     @Test
-    public void testCreate() {
-        MaintenanceLog log = new MaintenanceLog();
-        log.inventoryItemId = 1L;
-        log.maintenanceDate = LocalDate.now();
-        log.description = "Test";
-        log.workPerformed = "Cleaning";
+    void testCreateMaintenanceLog() {
+        // Create a locomotive first
+        Locomotive locomotive = createTestLocomotive();
+        Locomotive saved = locomotiveRepository.save(locomotive);
 
-        MaintenanceLog saved = new MaintenanceLog();
-        saved.id = 1L;
-        saved.inventoryItemId = 1L;
-        saved.maintenanceDate = LocalDate.now();
-        saved.description = "Test";
-        saved.workPerformed = "Cleaning";
+        CreateMaintenanceLogRequest request = new CreateMaintenanceLogRequest();
+        request.setInventoryItemId(saved.getId());
+        request.setMaintenanceDate(LocalDate.now());
+        request.setDescription("Routine cleaning");
+        request.setWorkPerformed("Cleaned wheels and motor");
+        request.setPerformedBy("Owner");
+        request.setNotes("Running smoothly");
 
-        when(repository.save(any(MaintenanceLog.class))).thenReturn(saved);
+        MaintenanceLogResponse response = service.createMaintenanceLog(request);
 
-        MaintenanceLog result = service.create(log);
-
-        assertNotNull(result);
-        assertNotNull(result.id);
-        verify(repository, times(1)).save(any(MaintenanceLog.class));
+        assertNotNull(response);
+        assertNotNull(response.getId());
+        assertEquals(saved.getId(), response.getInventoryItemId());
+        assertEquals("Routine cleaning", response.getDescription());
     }
 
     @Test
-    public void testGetById() {
-        MaintenanceLog log = new MaintenanceLog();
-        log.id = 1L;
-        log.inventoryItemId = 1L;
-        log.maintenanceDate = LocalDate.now();
-        log.description = "Test";
+    void testCreateMaintenanceLog_InventoryItemNotFound() {
+        CreateMaintenanceLogRequest request = new CreateMaintenanceLogRequest();
+        request.setInventoryItemId(999L);
+        request.setMaintenanceDate(LocalDate.now());
+        request.setDescription("Test");
+        request.setWorkPerformed("Test");
+        request.setPerformedBy("Owner");
 
-        when(repository.findById(1L)).thenReturn(log);
-
-        MaintenanceLog result = service.getById(1L);
-
-        assertNotNull(result);
-        assertEquals("Test", result.description);
-        verify(repository, times(1)).findById(1L);
+        assertThrows(ResourceNotFoundException.class, () ->
+                service.createMaintenanceLog(request));
     }
 
     @Test
-    public void testGetByItemId() {
-        List<MaintenanceLog> logs = new ArrayList<>();
+    void testGetMaintenanceLogById() {
+        Locomotive locomotive = createTestLocomotive();
+        Locomotive saved = locomotiveRepository.save(locomotive);
 
-        MaintenanceLog log1 = new MaintenanceLog();
-        log1.id = 1L;
-        log1.inventoryItemId = 1L;
-        log1.maintenanceDate = LocalDate.now();
-        log1.description = "Test1";
-        logs.add(log1);
+        CreateMaintenanceLogRequest request = new CreateMaintenanceLogRequest();
+        request.setInventoryItemId(saved.getId());
+        request.setMaintenanceDate(LocalDate.now());
+        request.setDescription("Test");
+        request.setWorkPerformed("Test work");
+        request.setPerformedBy("Owner");
+        request.setNotes("Notes");
 
-        MaintenanceLog log2 = new MaintenanceLog();
-        log2.id = 2L;
-        log2.inventoryItemId = 1L;
-        log2.maintenanceDate = LocalDate.now();
-        log2.description = "Test2";
-        logs.add(log2);
+        MaintenanceLogResponse created = service.createMaintenanceLog(request);
 
-        when(repository.findByItem(1L)).thenReturn(logs);
+        MaintenanceLogResponse found = service.getMaintenanceLogById(created.getId());
 
-        List<MaintenanceLog> result = service.getByItemId(1L);
-
-        assertEquals(2, result.size());
-        verify(repository, times(1)).findByItem(1L);
+        assertNotNull(found);
+        assertEquals(created.getId(), found.getId());
     }
 
     @Test
-    public void testDelete() {
-        doNothing().when(repository).deleteById(1L);
-
-        service.delete(1L);
-
-        verify(repository, times(1)).deleteById(1L);
+    void testGetMaintenanceLogById_NotFound() {
+        assertThrows(ResourceNotFoundException.class, () ->
+                service.getMaintenanceLogById(999L));
     }
 
     @Test
-    public void testUpdateItemStatusForLocomotive() {
+    void testGetMaintenanceLogsByItemId() {
+        Locomotive locomotive = createTestLocomotive();
+        Locomotive saved = locomotiveRepository.save(locomotive);
+
+        // Create multiple logs for the same item
+        createMaintenanceLogForItem(saved.getId(), "Log 1");
+        createMaintenanceLogForItem(saved.getId(), "Log 2");
+        createMaintenanceLogForItem(saved.getId(), "Log 3");
+
+        List<MaintenanceLogResponse> logs = service.getMaintenanceLogsByItemId(saved.getId());
+
+        assertEquals(3, logs.size());
+        assertTrue(logs.stream().allMatch(log -> log.getInventoryItemId().equals(saved.getId())));
+    }
+
+    @Test
+    void testUpdateMaintenanceStatus() {
+        Locomotive locomotive = createTestLocomotive();
+        locomotive.setMaintenanceStatus(MaintenanceStatus.OPERATIONAL);
+        Locomotive saved = locomotiveRepository.save(locomotive);
+
+        service.updateMaintenanceStatus(saved.getId(), MaintenanceStatus.NEEDS_MAINTENANCE);
+
+        Locomotive updated = locomotiveRepository.findById(saved.getId()).orElseThrow();
+        assertEquals(MaintenanceStatus.NEEDS_MAINTENANCE, updated.getMaintenanceStatus());
+    }
+
+    @Test
+    void testUpdateMaintenanceStatus_ItemNotFound() {
+        assertThrows(ResourceNotFoundException.class, () ->
+                service.updateMaintenanceStatus(999L, MaintenanceStatus.OPERATIONAL));
+    }
+
+    @Test
+    void testDeleteMaintenanceLog() {
+        Locomotive locomotive = createTestLocomotive();
+        Locomotive saved = locomotiveRepository.save(locomotive);
+
+        CreateMaintenanceLogRequest request = new CreateMaintenanceLogRequest();
+        request.setInventoryItemId(saved.getId());
+        request.setMaintenanceDate(LocalDate.now());
+        request.setDescription("Test");
+        request.setWorkPerformed("Test work");
+        request.setPerformedBy("Owner");
+
+        MaintenanceLogResponse created = service.createMaintenanceLog(request);
+
+        service.deleteMaintenanceLog(created.getId());
+
+        assertThrows(ResourceNotFoundException.class, () ->
+                service.getMaintenanceLogById(created.getId()));
+    }
+
+    private Locomotive createTestLocomotive() {
         Locomotive locomotive = new Locomotive();
-        locomotive.id = 1L;
-        locomotive.manufacturer = "Test";
-        locomotive.maintenanceStatus = MaintenanceStatus.OPERATIONAL;
-
-        when(locomotiveRepository.findById(1L)).thenReturn(locomotive);
-        when(locomotiveRepository.update(eq(1L), any(Locomotive.class))).thenReturn(locomotive);
-
-        service.updateItemStatus(1L, MaintenanceStatus.IN_MAINTENANCE);
-
-        verify(locomotiveRepository, times(1)).findById(1L);
-        verify(locomotiveRepository, times(1)).update(eq(1L), any(Locomotive.class));
-        verify(rollingStockRepository, never()).findById(any());
+        locomotive.setManufacturer("Athearn");
+        locomotive.setModelNumber("RTR-87901");
+        locomotive.setScale(Scale.HO);
+        locomotive.setRoadName("Union Pacific");
+        locomotive.setColor("Yellow/Gray");
+        locomotive.setDescription("SD70M Locomotive");
+        locomotive.setPurchasePrice(new BigDecimal("189.99"));
+        locomotive.setPurchaseDate(LocalDate.of(2024, 1, 15));
+        locomotive.setCurrentValue(new BigDecimal("189.99"));
+        locomotive.setNotes("DCC Ready");
+        locomotive.setMaintenanceStatus(MaintenanceStatus.OPERATIONAL);
+        locomotive.setLocomotiveType(LocomotiveType.DIESEL);
+        locomotive.setPowerType(PowerType.DCC_SOUND);
+        locomotive.setRoadNumber("4141");
+        return locomotive;
     }
 
-    @Test
-    public void testUpdateItemStatusForRollingStock() {
-        RollingStock rollingStock = new RollingStock();
-        rollingStock.id = 2L;
-        rollingStock.manufacturer = "Test";
-        rollingStock.maintenanceStatus = MaintenanceStatus.OPERATIONAL;
-
-        when(locomotiveRepository.findById(2L)).thenReturn(null);
-        when(rollingStockRepository.findById(2L)).thenReturn(rollingStock);
-        when(rollingStockRepository.update(eq(2L), any(RollingStock.class))).thenReturn(rollingStock);
-
-        service.updateItemStatus(2L, MaintenanceStatus.NEEDS_MAINTENANCE);
-
-        verify(locomotiveRepository, times(1)).findById(2L);
-        verify(rollingStockRepository, times(1)).findById(2L);
-        verify(rollingStockRepository, times(1)).update(eq(2L), any(RollingStock.class));
+    private void createMaintenanceLogForItem(Long itemId, String description) {
+        CreateMaintenanceLogRequest request = new CreateMaintenanceLogRequest();
+        request.setInventoryItemId(itemId);
+        request.setMaintenanceDate(LocalDate.now());
+        request.setDescription(description);
+        request.setWorkPerformed("Work performed");
+        request.setPerformedBy("Owner");
+        request.setNotes("Notes");
+        service.createMaintenanceLog(request);
     }
 
-    @Test
-    public void testUpdateItemStatusForNonExistentItem() {
-        when(locomotiveRepository.findById(999L)).thenReturn(null);
-        when(rollingStockRepository.findById(999L)).thenReturn(null);
-
-        service.updateItemStatus(999L, MaintenanceStatus.OUT_OF_SERVICE);
-
-        verify(locomotiveRepository, times(1)).findById(999L);
-        verify(rollingStockRepository, times(1)).findById(999L);
-        verify(locomotiveRepository, never()).update(any(), any());
-        verify(rollingStockRepository, never()).update(any(), any());
-    }
-
-    @Test
-    public void testGetByItemIdReturnsEmptyList() {
-        when(repository.findByItem(999L)).thenReturn(new ArrayList<>());
-
-        List<MaintenanceLog> result = service.getByItemId(999L);
-
-        assertEquals(0, result.size());
-        verify(repository, times(1)).findByItem(999L);
-    }
-
-    @Test
-    public void testGetByIdReturnsNull() {
-        when(repository.findById(999L)).thenReturn(null);
-
-        MaintenanceLog result = service.getById(999L);
-
-        assertEquals(null, result);
-        verify(repository, times(1)).findById(999L);
+    private void deleteFileIfExists(String filePath) {
+        File file = new File(filePath);
+        if (file.exists()) {
+            file.delete();
+        }
     }
 }

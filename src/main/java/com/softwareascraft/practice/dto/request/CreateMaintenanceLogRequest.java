@@ -1,29 +1,14 @@
-package com.softwareascraft.practice.model;
+package com.softwareascraft.practice.dto.request;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
-public class MaintenanceLog {
-    private Long id;
+public class CreateMaintenanceLogRequest {
     private Long inventoryItemId;
     private LocalDate maintenanceDate;
     private String description;
     private String workPerformed;
     private String performedBy;
     private String notes;
-    private LocalDateTime createdDate;
-
-    public MaintenanceLog() {
-        this.createdDate = LocalDateTime.now();
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
 
     public Long getInventoryItemId() {
         return inventoryItemId;
@@ -71,13 +56,5 @@ public class MaintenanceLog {
 
     public void setNotes(String notes) {
         this.notes = notes;
-    }
-
-    public LocalDateTime getCreatedDate() {
-        return createdDate;
-    }
-
-    public void setCreatedDate(LocalDateTime createdDate) {
-        this.createdDate = createdDate;
     }
 }

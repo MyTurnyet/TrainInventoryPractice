@@ -9,5 +9,4 @@ public class TrainInventoryApplication {
     public static void main(String[] args) {
         SpringApplication.run(TrainInventoryApplication.class, args);
     }
-
 }

@@ -1,31 +1,38 @@
 package com.softwareascraft.practice.model;
 
 import com.softwareascraft.practice.enums.LocomotiveType;
-import com.softwareascraft.practice.enums.MaintenanceStatus;
 import com.softwareascraft.practice.enums.PowerType;
-import com.softwareascraft.practice.enums.Scale;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
+public class Locomotive extends BaseInventoryItem {
+    private LocomotiveType locomotiveType;
+    private PowerType powerType;
+    private String roadNumber;
 
-public class Locomotive {
-    public Long id;
-    public String manufacturer;
-    public String modelNumber;
-    public Scale scale;
-    public String roadName;
-    public String color;
-    public String era;
-    public String description;
-    public BigDecimal purchasePrice;
-    public LocalDate purchaseDate;
-    public BigDecimal currentValue;
-    public String notes;
-    public LocalDateTime createdDate;
-    public LocalDateTime lastModifiedDate;
-    public MaintenanceStatus maintenanceStatus;
-    public LocomotiveType locomotiveType;
-    public PowerType powerType;
-    public String roadNumber;
+    public Locomotive() {
+        super();
+    }
+
+    public LocomotiveType getLocomotiveType() {
+        return locomotiveType;
+    }
+
+    public void setLocomotiveType(LocomotiveType locomotiveType) {
+        this.locomotiveType = locomotiveType;
+    }
+
+    public PowerType getPowerType() {
+        return powerType;
+    }
+
+    public void setPowerType(PowerType powerType) {
+        this.powerType = powerType;
+    }
+
+    public String getRoadNumber() {
+        return roadNumber;
+    }
+
+    public void setRoadNumber(String roadNumber) {
+        this.roadNumber = roadNumber;
+    }
 }

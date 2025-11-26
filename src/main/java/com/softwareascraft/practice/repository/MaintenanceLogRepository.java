@@ -1,129 +1,116 @@
 package com.softwareascraft.practice.repository;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.softwareascraft.practice.exception.ResourceNotFoundException;
 import com.softwareascraft.practice.model.MaintenanceLog;
-import org.springframework.stereotype.Repository;
+import com.softwareascraft.practice.util.IdGenerator;
+import com.softwareascraft.practice.util.JsonFileManager;
 
-import java.io.File;
-import java.io.IOException;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
+import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
-@Repository
+/**
+ * Repository for MaintenanceLog entities (ANTI-PATTERN for teaching purposes)
+ * - Hard-coded file path
+ * - Direct calls to static utility methods
+ * - No interface abstraction
+ * - Cannot be easily mocked or substituted
+ */
 public class MaintenanceLogRepository {
 
-    private String path = "data/maintenance-logs.json";
+    // Hard-coded file name (ANTI-PATTERN)
+    private static final String FILE_NAME = "maintenance-logs.json";
+    private static final String ENTITY_TYPE = "maintenance_log";
 
-    public List<MaintenanceLog> findAll() {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new JavaTimeModule());
-        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-
-        try {
-            File f = new File(path);
-            if (!f.exists()) {
-                return new ArrayList<>();
-            }
-            List<MaintenanceLog> list = mapper.readValue(f, new TypeReference<List<MaintenanceLog>>() {});
-            return list;
-        } catch (IOException e) {
-            e.printStackTrace();
-            return new ArrayList<>();
-        }
-    }
-
-    public MaintenanceLog findById(Long id) {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new JavaTimeModule());
-        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-
-        try {
-            File f = new File(path);
-            if (!f.exists()) {
-                return null;
-            }
-            List<MaintenanceLog> list = mapper.readValue(f, new TypeReference<List<MaintenanceLog>>() {});
-            for (int i = 0; i < list.size(); i++) {
-                if (list.get(i).id.equals(id)) {
-                    return list.get(i);
-                }
-            }
-            return null;
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
-        }
+    public MaintenanceLogRepository() {
+        // Initialize ID counter from existing data
+        List<MaintenanceLog> existing = findAll();
+        IdGenerator.initializeCounter(ENTITY_TYPE, existing);
     }
 
     public MaintenanceLog save(MaintenanceLog log) {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new JavaTimeModule());
-        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        mapper.enable(SerializationFeature.INDENT_OUTPUT);
+        List<MaintenanceLog> logs = findAll();
 
-        try {
-            File f = new File(path);
-            List<MaintenanceLog> list = new ArrayList<>();
+        // Generate new ID using static utility (ANTI-PATTERN)
+        Long newId = IdGenerator.generateId(ENTITY_TYPE);
+        log.setId(newId);
 
-            if (f.exists()) {
-                list = mapper.readValue(f, new TypeReference<List<MaintenanceLog>>() {});
-            } else {
-                f.getParentFile().mkdirs();
-                f.createNewFile();
+        logs.add(log);
+
+        // Call static utility method directly (ANTI-PATTERN)
+        JsonFileManager.writeToFile(FILE_NAME, logs);
+
+        return log;
+    }
+
+    public Optional<MaintenanceLog> findById(Long id) {
+        List<MaintenanceLog> logs = findAll();
+        return logs.stream()
+                .filter(log -> log.getId().equals(id))
+                .findFirst();
+    }
+
+    public List<MaintenanceLog> findAll() {
+        // Call static utility method directly (ANTI-PATTERN)
+        return JsonFileManager.readFromFile(FILE_NAME, new TypeReference<List<MaintenanceLog>>() {});
+    }
+
+    public MaintenanceLog update(Long id, MaintenanceLog updatedLog) {
+        List<MaintenanceLog> logs = findAll();
+
+        boolean found = false;
+        for (int i = 0; i < logs.size(); i++) {
+            if (logs.get(i).getId().equals(id)) {
+                updatedLog.setId(id);
+                logs.set(i, updatedLog);
+                found = true;
+                break;
             }
-
-            long max = 0;
-            for (int i = 0; i < list.size(); i++) {
-                if (list.get(i).id > max) {
-                    max = list.get(i).id;
-                }
-            }
-            log.id = max + 1;
-            log.createdDate = LocalDateTime.now();
-
-            list.add(log);
-            mapper.writeValue(f, list);
-            return log;
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
         }
+
+        if (!found) {
+            throw new ResourceNotFoundException("MaintenanceLog", id);
+        }
+
+        // Call static utility method directly (ANTI-PATTERN)
+        JsonFileManager.writeToFile(FILE_NAME, logs);
+
+        return updatedLog;
     }
 
     public void deleteById(Long id) {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new JavaTimeModule());
-        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        mapper.enable(SerializationFeature.INDENT_OUTPUT);
+        List<MaintenanceLog> logs = findAll();
 
-        try {
-            File f = new File(path);
-            List<MaintenanceLog> list = mapper.readValue(f, new TypeReference<List<MaintenanceLog>>() {});
+        boolean removed = logs.removeIf(log -> log.getId().equals(id));
 
-            for (int i = 0; i < list.size(); i++) {
-                if (list.get(i).id.equals(id)) {
-                    list.remove(i);
-                    break;
-                }
-            }
-            mapper.writeValue(f, list);
-        } catch (IOException e) {
-            e.printStackTrace();
+        if (!removed) {
+            throw new ResourceNotFoundException("MaintenanceLog", id);
         }
+
+        // Call static utility method directly (ANTI-PATTERN)
+        JsonFileManager.writeToFile(FILE_NAME, logs);
     }
 
-    public List<MaintenanceLog> findByItem(Long itemId) {
-        List<MaintenanceLog> all = findAll();
-        List<MaintenanceLog> result = new ArrayList<>();
-        for (int i = 0; i < all.size(); i++) {
-            if (all.get(i).inventoryItemId.equals(itemId)) {
-                result.add(all.get(i));
-            }
-        }
-        return result;
+    public List<MaintenanceLog> findByInventoryItemId(Long itemId) {
+        return findAll().stream()
+                .filter(log -> log.getInventoryItemId().equals(itemId))
+                .collect(Collectors.toList());
+    }
+
+    public List<MaintenanceLog> findByInventoryItemIdOrderByMaintenanceDateDesc(Long itemId) {
+        return findAll().stream()
+                .filter(log -> log.getInventoryItemId().equals(itemId))
+                .sorted(Comparator.comparing(MaintenanceLog::getMaintenanceDate).reversed())
+                .collect(Collectors.toList());
+    }
+
+    public List<MaintenanceLog> findByMaintenanceDateBetween(LocalDate start, LocalDate end) {
+        return findAll().stream()
+                .filter(log -> !log.getMaintenanceDate().isBefore(start) &&
+                              !log.getMaintenanceDate().isAfter(end))
+                .collect(Collectors.toList());
     }
 }

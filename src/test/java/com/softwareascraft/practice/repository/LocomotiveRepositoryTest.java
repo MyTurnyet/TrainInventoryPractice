@@ -1,150 +1,197 @@
 package com.softwareascraft.practice.repository;
 
 import com.softwareascraft.practice.enums.LocomotiveType;
+import com.softwareascraft.practice.enums.MaintenanceStatus;
 import com.softwareascraft.practice.enums.PowerType;
 import com.softwareascraft.practice.enums.Scale;
+import com.softwareascraft.practice.exception.ResourceNotFoundException;
 import com.softwareascraft.practice.model.Locomotive;
+import com.softwareascraft.practice.util.IdGenerator;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class LocomotiveRepositoryTest {
+/**
+ * Repository test with real file I/O (ANTI-PATTERN for teaching purposes)
+ * - Uses real JSON files
+ * - Slow execution
+ * - Tests can interfere with each other
+ * - Requires file system cleanup
+ */
+class LocomotiveRepositoryTest {
 
-    private LocomotiveRepository repo = new LocomotiveRepository();
+    private LocomotiveRepository repository;
+    private static final String DATA_DIR = "data/";
+    private static final String TEST_FILE = "locomotives.json";
 
     @BeforeEach
-    public void setup() {
-        // delete the file before each test
-        File f = new File("data/locomotives.json");
-        if (f.exists()) {
-            f.delete();
-        }
+    void setUp() {
+        // Reset ID counter for each test
+        IdGenerator.resetIdCounter("locomotive");
+        repository = new LocomotiveRepository();
     }
 
     @AfterEach
-    public void cleanup() {
-        // delete the file after each test
-        File f = new File("data/locomotives.json");
-        if (f.exists()) {
-            f.delete();
+    void tearDown() {
+        // Clean up test data files
+        File dataFile = new File(DATA_DIR + TEST_FILE);
+        if (dataFile.exists()) {
+            dataFile.delete();
         }
+        IdGenerator.resetIdCounter("locomotive");
     }
 
     @Test
-    public void testSaveAndFindAll() {
-        Locomotive l = new Locomotive();
-        l.manufacturer = "Test";
-        l.modelNumber = "123";
-        l.scale = Scale.HO;
-        l.locomotiveType = LocomotiveType.DIESEL;
-        l.powerType = PowerType.DCC;
+    void testSaveLocomotive() {
+        Locomotive locomotive = createTestLocomotive();
 
-        Locomotive saved = repo.save(l);
-        assertNotNull(saved.id);
+        Locomotive saved = repository.save(locomotive);
 
-        List<Locomotive> list = repo.findAll();
-        assertEquals(1, list.size());
-        assertEquals("Test", list.get(0).manufacturer);
+        assertNotNull(saved.getId());
+        assertEquals("Athearn", saved.getManufacturer());
+        assertEquals(Scale.HO, saved.getScale());
     }
 
     @Test
-    public void test2() {
-        Locomotive l1 = new Locomotive();
-        l1.manufacturer = "Athearn";
-        l1.scale = Scale.HO;
-        l1.locomotiveType = LocomotiveType.STEAM;
-        l1.powerType = PowerType.DC;
+    void testFindById() {
+        Locomotive locomotive = createTestLocomotive();
+        Locomotive saved = repository.save(locomotive);
 
-        Locomotive l2 = new Locomotive();
-        l2.manufacturer = "Walthers";
-        l2.scale = Scale.N;
-        l2.locomotiveType = LocomotiveType.DIESEL;
-        l2.powerType = PowerType.DCC_SOUND;
+        Optional<Locomotive> found = repository.findById(saved.getId());
 
-        repo.save(l1);
-        repo.save(l2);
+        assertTrue(found.isPresent());
+        assertEquals(saved.getId(), found.get().getId());
+        assertEquals("Athearn", found.get().getManufacturer());
+    }
 
-        List<Locomotive> all = repo.findAll();
+    @Test
+    void testFindById_NotFound() {
+        Optional<Locomotive> found = repository.findById(999L);
+
+        assertFalse(found.isPresent());
+    }
+
+    @Test
+    void testFindAll() {
+        repository.save(createTestLocomotive());
+        repository.save(createTestLocomotive());
+
+        List<Locomotive> all = repository.findAll();
+
         assertEquals(2, all.size());
     }
 
     @Test
-    public void testFindById() {
-        Locomotive l = new Locomotive();
-        l.manufacturer = "Test";
-        l.scale = Scale.O;
-        l.locomotiveType = LocomotiveType.ELECTRIC;
-        l.powerType = PowerType.DC;
+    void testUpdate() {
+        Locomotive locomotive = createTestLocomotive();
+        Locomotive saved = repository.save(locomotive);
 
-        Locomotive saved = repo.save(l);
-        Long id = saved.id;
+        saved.setManufacturer("Updated Manufacturer");
+        saved.setRoadName("Updated Road");
 
-        Locomotive found = repo.findById(id);
-        assertNotNull(found);
-        assertEquals("Test", found.manufacturer);
+        Locomotive updated = repository.update(saved.getId(), saved);
+
+        assertEquals("Updated Manufacturer", updated.getManufacturer());
+        assertEquals("Updated Road", updated.getRoadName());
     }
 
     @Test
-    public void testUpdate() {
-        Locomotive l = new Locomotive();
-        l.manufacturer = "Original";
-        l.scale = Scale.G;
-        l.locomotiveType = LocomotiveType.DIESEL;
-        l.powerType = PowerType.DCC;
+    void testUpdate_NotFound() {
+        Locomotive locomotive = createTestLocomotive();
 
-        Locomotive saved = repo.save(l);
-
-        saved.manufacturer = "Updated";
-        Locomotive updated = repo.update(saved.id, saved);
-
-        assertEquals("Updated", updated.manufacturer);
+        assertThrows(ResourceNotFoundException.class, () ->
+                repository.update(999L, locomotive));
     }
 
     @Test
-    public void testDelete() {
-        Locomotive l = new Locomotive();
-        l.manufacturer = "ToDelete";
-        l.scale = Scale.HO;
-        l.locomotiveType = LocomotiveType.STEAM;
-        l.powerType = PowerType.BATTERY;
+    void testDeleteById() {
+        Locomotive locomotive = createTestLocomotive();
+        Locomotive saved = repository.save(locomotive);
 
-        Locomotive saved = repo.save(l);
-        repo.deleteById(saved.id);
+        repository.deleteById(saved.getId());
 
-        List<Locomotive> all = repo.findAll();
-        assertEquals(0, all.size());
+        Optional<Locomotive> found = repository.findById(saved.getId());
+        assertFalse(found.isPresent());
     }
 
     @Test
-    public void testFindByScale() {
-        Locomotive l1 = new Locomotive();
-        l1.manufacturer = "Test1";
-        l1.scale = Scale.HO;
-        l1.locomotiveType = LocomotiveType.DIESEL;
-        l1.powerType = PowerType.DC;
-        repo.save(l1);
+    void testDeleteById_NotFound() {
+        assertThrows(ResourceNotFoundException.class, () ->
+                repository.deleteById(999L));
+    }
 
-        Locomotive l2 = new Locomotive();
-        l2.manufacturer = "Test2";
-        l2.scale = Scale.N;
-        l2.locomotiveType = LocomotiveType.STEAM;
-        l2.powerType = PowerType.DCC;
-        repo.save(l2);
+    @Test
+    void testFindByManufacturer() {
+        Locomotive loco1 = createTestLocomotive();
+        loco1.setManufacturer("Athearn");
+        repository.save(loco1);
 
-        Locomotive l3 = new Locomotive();
-        l3.manufacturer = "Test3";
-        l3.scale = Scale.HO;
-        l3.locomotiveType = LocomotiveType.ELECTRIC;
-        l3.powerType = PowerType.DCC_SOUND;
-        repo.save(l3);
+        Locomotive loco2 = createTestLocomotive();
+        loco2.setManufacturer("Walthers");
+        repository.save(loco2);
 
-        List<Locomotive> hoList = repo.findByScale(Scale.HO);
-        assertEquals(2, hoList.size());
+        List<Locomotive> result = repository.findByManufacturer("Athearn");
+
+        assertEquals(1, result.size());
+        assertEquals("Athearn", result.get(0).getManufacturer());
+    }
+
+    @Test
+    void testFindByScale() {
+        Locomotive loco1 = createTestLocomotive();
+        loco1.setScale(Scale.HO);
+        repository.save(loco1);
+
+        Locomotive loco2 = createTestLocomotive();
+        loco2.setScale(Scale.N);
+        repository.save(loco2);
+
+        List<Locomotive> result = repository.findByScale(Scale.HO);
+
+        assertEquals(1, result.size());
+        assertEquals(Scale.HO, result.get(0).getScale());
+    }
+
+    @Test
+    void testFindByMaintenanceStatus() {
+        Locomotive loco1 = createTestLocomotive();
+        loco1.setMaintenanceStatus(MaintenanceStatus.OPERATIONAL);
+        repository.save(loco1);
+
+        Locomotive loco2 = createTestLocomotive();
+        loco2.setMaintenanceStatus(MaintenanceStatus.NEEDS_MAINTENANCE);
+        repository.save(loco2);
+
+        List<Locomotive> result = repository.findByMaintenanceStatus(MaintenanceStatus.OPERATIONAL);
+
+        assertEquals(1, result.size());
+        assertEquals(MaintenanceStatus.OPERATIONAL, result.get(0).getMaintenanceStatus());
+    }
+
+    private Locomotive createTestLocomotive() {
+        Locomotive locomotive = new Locomotive();
+        locomotive.setManufacturer("Athearn");
+        locomotive.setModelNumber("RTR-87901");
+        locomotive.setScale(Scale.HO);
+        locomotive.setRoadName("Union Pacific");
+        locomotive.setColor("Yellow/Gray");
+        locomotive.setDescription("SD70M Locomotive");
+        locomotive.setPurchasePrice(new BigDecimal("189.99"));
+        locomotive.setPurchaseDate(LocalDate.of(2024, 1, 15));
+        locomotive.setCurrentValue(new BigDecimal("189.99"));
+        locomotive.setNotes("DCC Ready");
+        locomotive.setMaintenanceStatus(MaintenanceStatus.OPERATIONAL);
+        locomotive.setLocomotiveType(LocomotiveType.DIESEL);
+        locomotive.setPowerType(PowerType.DCC_SOUND);
+        locomotive.setRoadNumber("4141");
+        return locomotive;
     }
 }

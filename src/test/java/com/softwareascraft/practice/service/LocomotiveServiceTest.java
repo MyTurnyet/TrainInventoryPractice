@@ -1,298 +1,174 @@
 package com.softwareascraft.practice.service;
 
+import com.softwareascraft.practice.dto.request.CreateLocomotiveRequest;
+import com.softwareascraft.practice.dto.request.UpdateLocomotiveRequest;
+import com.softwareascraft.practice.dto.response.LocomotiveResponse;
 import com.softwareascraft.practice.enums.LocomotiveType;
 import com.softwareascraft.practice.enums.MaintenanceStatus;
 import com.softwareascraft.practice.enums.PowerType;
 import com.softwareascraft.practice.enums.Scale;
-import com.softwareascraft.practice.model.Locomotive;
-import com.softwareascraft.practice.model.MaintenanceLog;
-import com.softwareascraft.practice.repository.LocomotiveRepository;
-import com.softwareascraft.practice.repository.MaintenanceLogRepository;
+import com.softwareascraft.practice.exception.ResourceNotFoundException;
+import com.softwareascraft.practice.util.IdGenerator;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.ArrayList;
+import java.io.File;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-@ExtendWith(MockitoExtension.class)
-public class LocomotiveServiceTest {
+/**
+ * Service test with real repository and file I/O (ANTI-PATTERN for teaching purposes)
+ * - Uses real repository instead of mocks
+ * - Slow execution due to file operations
+ * - Hard to isolate failures
+ * - Requires file system cleanup
+ */
+class LocomotiveServiceTest {
 
-    @Mock
-    private LocomotiveRepository repository;
-
-    @Mock
-    private MaintenanceLogRepository maintenanceLogRepository;
-
-    @InjectMocks
     private LocomotiveService service;
+    private static final String DATA_DIR = "data/";
+    private static final String TEST_FILE = "locomotives.json";
 
     @BeforeEach
-    public void setup() {
-        // Mocks are initialized by @ExtendWith(MockitoExtension.class)
+    void setUp() {
+        IdGenerator.resetIdCounter("locomotive");
+        service = new LocomotiveService();
+    }
+
+    @AfterEach
+    void tearDown() {
+        File dataFile = new File(DATA_DIR + TEST_FILE);
+        if (dataFile.exists()) {
+            dataFile.delete();
+        }
+        IdGenerator.resetIdCounter("locomotive");
     }
 
     @Test
-    public void testCreate() {
-        Locomotive l = new Locomotive();
-        l.manufacturer = "Test";
-        l.scale = Scale.HO;
-        l.locomotiveType = LocomotiveType.DIESEL;
-        l.powerType = PowerType.DCC;
+    void testCreateLocomotive() {
+        CreateLocomotiveRequest request = createLocomotiveRequest();
 
-        Locomotive saved = new Locomotive();
-        saved.id = 1L;
-        saved.manufacturer = "Test";
-        saved.scale = Scale.HO;
-        saved.locomotiveType = LocomotiveType.DIESEL;
-        saved.powerType = PowerType.DCC;
+        LocomotiveResponse response = service.createLocomotive(request);
 
-        when(repository.save(any(Locomotive.class))).thenReturn(saved);
-
-        Locomotive result = service.create(l);
-
-        assertNotNull(result);
-        assertNotNull(result.id);
-        verify(repository, times(1)).save(any(Locomotive.class));
+        assertNotNull(response);
+        assertNotNull(response.getId());
+        assertEquals("Athearn", response.getManufacturer());
+        assertEquals(Scale.HO, response.getScale());
+        assertEquals(LocomotiveType.DIESEL, response.getLocomotiveType());
     }
 
     @Test
-    public void test2() {
-        Locomotive l = new Locomotive();
-        l.id = 1L;
-        l.manufacturer = "Test";
-        l.scale = Scale.HO;
-        l.locomotiveType = LocomotiveType.STEAM;
-        l.powerType = PowerType.DC;
+    void testGetLocomotiveById() {
+        CreateLocomotiveRequest request = createLocomotiveRequest();
+        LocomotiveResponse created = service.createLocomotive(request);
 
-        when(repository.findById(1L)).thenReturn(l);
-
-        Locomotive found = service.getById(1L);
+        LocomotiveResponse found = service.getLocomotiveById(created.getId());
 
         assertNotNull(found);
-        assertEquals("Test", found.manufacturer);
-        verify(repository, times(1)).findById(1L);
+        assertEquals(created.getId(), found.getId());
+        assertEquals("Athearn", found.getManufacturer());
     }
 
     @Test
-    public void testGetAll() {
-        List<Locomotive> list = new ArrayList<>();
+    void testGetLocomotiveById_NotFound() {
+        assertThrows(ResourceNotFoundException.class, () ->
+                service.getLocomotiveById(999L));
+    }
 
-        Locomotive l1 = new Locomotive();
-        l1.id = 1L;
-        l1.manufacturer = "Test1";
-        l1.scale = Scale.HO;
-        l1.locomotiveType = LocomotiveType.DIESEL;
-        l1.powerType = PowerType.DCC;
-        list.add(l1);
+    @Test
+    void testGetAllLocomotives() {
+        service.createLocomotive(createLocomotiveRequest());
+        service.createLocomotive(createLocomotiveRequest());
 
-        Locomotive l2 = new Locomotive();
-        l2.id = 2L;
-        l2.manufacturer = "Test2";
-        l2.scale = Scale.N;
-        l2.locomotiveType = LocomotiveType.STEAM;
-        l2.powerType = PowerType.DC;
-        list.add(l2);
-
-        when(repository.findAll()).thenReturn(list);
-
-        List<Locomotive> all = service.getAll();
+        List<LocomotiveResponse> all = service.getAllLocomotives();
 
         assertEquals(2, all.size());
-        verify(repository, times(1)).findAll();
     }
 
     @Test
-    public void testSearch() {
-        List<Locomotive> allLocos = new ArrayList<>();
+    void testUpdateLocomotive() {
+        CreateLocomotiveRequest createRequest = createLocomotiveRequest();
+        LocomotiveResponse created = service.createLocomotive(createRequest);
 
-        Locomotive l1 = new Locomotive();
-        l1.id = 1L;
-        l1.manufacturer = "Athearn";
-        l1.scale = Scale.HO;
-        l1.locomotiveType = LocomotiveType.DIESEL;
-        l1.powerType = PowerType.DCC;
-        l1.maintenanceStatus = MaintenanceStatus.OPERATIONAL;
-        allLocos.add(l1);
+        UpdateLocomotiveRequest updateRequest = new UpdateLocomotiveRequest();
+        updateRequest.setManufacturer("Updated Manufacturer");
+        updateRequest.setModelNumber("NEW-MODEL");
+        updateRequest.setScale(Scale.N);
+        updateRequest.setRoadName("Updated Road");
+        updateRequest.setColor("Blue");
+        updateRequest.setDescription("Updated Description");
+        updateRequest.setPurchasePrice(new BigDecimal("299.99"));
+        updateRequest.setPurchaseDate(LocalDate.now());
+        updateRequest.setCurrentValue(new BigDecimal("299.99"));
+        updateRequest.setNotes("Updated notes");
+        updateRequest.setMaintenanceStatus(MaintenanceStatus.OPERATIONAL);
+        updateRequest.setLocomotiveType(LocomotiveType.ELECTRIC);
+        updateRequest.setPowerType(PowerType.DCC);
+        updateRequest.setRoadNumber("9999");
 
-        Locomotive l2 = new Locomotive();
-        l2.id = 2L;
-        l2.manufacturer = "Walthers";
-        l2.scale = Scale.HO;
-        l2.locomotiveType = LocomotiveType.STEAM;
-        l2.powerType = PowerType.DC;
-        l2.maintenanceStatus = MaintenanceStatus.NEEDS_MAINTENANCE;
-        allLocos.add(l2);
+        LocomotiveResponse updated = service.updateLocomotive(created.getId(), updateRequest);
 
-        when(repository.findAll()).thenReturn(allLocos);
-
-        Map<String, Object> result = service.search("Athearn", null, null);
-        List<Locomotive> list = (List<Locomotive>) result.get("results");
-
-        assertEquals(1, list.size());
-        assertEquals("Athearn", list.get(0).manufacturer);
-        verify(repository, times(1)).findAll();
+        assertEquals("Updated Manufacturer", updated.getManufacturer());
+        assertEquals("NEW-MODEL", updated.getModelNumber());
+        assertEquals(Scale.N, updated.getScale());
     }
 
     @Test
-    public void testUpdateStatus() {
-        Locomotive l = new Locomotive();
-        l.id = 1L;
-        l.manufacturer = "Test";
-        l.scale = Scale.O;
-        l.locomotiveType = LocomotiveType.ELECTRIC;
-        l.powerType = PowerType.BATTERY;
-        l.maintenanceStatus = MaintenanceStatus.OPERATIONAL;
+    void testUpdateLocomotive_NotFound() {
+        UpdateLocomotiveRequest request = new UpdateLocomotiveRequest();
+        request.setManufacturer("Test");
 
-        when(repository.findById(1L)).thenReturn(l);
-        when(repository.update(eq(1L), any(Locomotive.class))).thenReturn(l);
-
-        service.updateStatus(1L, MaintenanceStatus.NEEDS_MAINTENANCE);
-
-        verify(repository, times(1)).findById(1L);
-        verify(repository, times(1)).update(eq(1L), any(Locomotive.class));
+        assertThrows(ResourceNotFoundException.class, () ->
+                service.updateLocomotive(999L, request));
     }
 
     @Test
-    public void testUpdate() {
-        Locomotive updated = new Locomotive();
-        updated.id = 1L;
-        updated.manufacturer = "Updated";
+    void testDeleteLocomotive() {
+        CreateLocomotiveRequest request = createLocomotiveRequest();
+        LocomotiveResponse created = service.createLocomotive(request);
 
-        when(repository.update(eq(1L), any(Locomotive.class))).thenReturn(updated);
+        service.deleteLocomotive(created.getId());
 
-        Locomotive input = new Locomotive();
-        input.manufacturer = "Updated";
-
-        Locomotive result = service.update(1L, input);
-
-        assertNotNull(result);
-        assertEquals("Updated", result.manufacturer);
-        verify(repository, times(1)).update(eq(1L), any(Locomotive.class));
+        assertThrows(ResourceNotFoundException.class, () ->
+                service.getLocomotiveById(created.getId()));
     }
 
     @Test
-    public void testDelete() {
-        doNothing().when(repository).deleteById(1L);
+    void testGetLocomotivesByManufacturer() {
+        CreateLocomotiveRequest request1 = createLocomotiveRequest();
+        request1.setManufacturer("Athearn");
+        service.createLocomotive(request1);
 
-        service.delete(1L);
+        CreateLocomotiveRequest request2 = createLocomotiveRequest();
+        request2.setManufacturer("Walthers");
+        service.createLocomotive(request2);
 
-        verify(repository, times(1)).deleteById(1L);
+        List<LocomotiveResponse> result = service.getLocomotivesByManufacturer("Athearn");
+
+        assertEquals(1, result.size());
+        assertEquals("Athearn", result.get(0).getManufacturer());
     }
 
-    @Test
-    public void testSearchWithEmptyResults() {
-        List<Locomotive> allLocos = new ArrayList<>();
-
-        Locomotive l1 = new Locomotive();
-        l1.id = 1L;
-        l1.manufacturer = "Athearn";
-        l1.scale = Scale.HO;
-        allLocos.add(l1);
-
-        when(repository.findAll()).thenReturn(allLocos);
-
-        Map<String, Object> result = service.search("Walthers", null, null);
-        List<Locomotive> list = (List<Locomotive>) result.get("results");
-
-        assertEquals(0, list.size());
-        assertEquals(0, result.get("total"));
-    }
-
-    @Test
-    public void testSearchWithMultipleCriteria() {
-        List<Locomotive> allLocos = new ArrayList<>();
-
-        Locomotive l1 = new Locomotive();
-        l1.id = 1L;
-        l1.manufacturer = "Athearn";
-        l1.scale = Scale.HO;
-        l1.maintenanceStatus = MaintenanceStatus.OPERATIONAL;
-        allLocos.add(l1);
-
-        Locomotive l2 = new Locomotive();
-        l2.id = 2L;
-        l2.manufacturer = "Athearn";
-        l2.scale = Scale.N;
-        l2.maintenanceStatus = MaintenanceStatus.NEEDS_MAINTENANCE;
-        allLocos.add(l2);
-
-        when(repository.findAll()).thenReturn(allLocos);
-
-        Map<String, Object> result = service.search("Athearn", Scale.HO, MaintenanceStatus.OPERATIONAL);
-        List<Locomotive> list = (List<Locomotive>) result.get("results");
-
-        assertEquals(1, list.size());
-        assertEquals(Scale.HO, list.get(0).scale);
-    }
-
-    @Test
-    public void testGetWithLogs() {
-        Locomotive l = new Locomotive();
-        l.id = 1L;
-        l.manufacturer = "Test";
-        l.scale = Scale.HO;
-
-        List<MaintenanceLog> logs = new ArrayList<>();
-        MaintenanceLog log = new MaintenanceLog();
-        log.id = 1L;
-        log.description = "Test log";
-        logs.add(log);
-
-        when(repository.findById(1L)).thenReturn(l);
-        when(maintenanceLogRepository.findByItem(1L)).thenReturn(logs);
-
-        Map<String, Object> result = service.getWithLogs(1L);
-
-        assertNotNull(result);
-        assertEquals(1L, result.get("id"));
-        assertEquals("Test", result.get("manufacturer"));
-        List<MaintenanceLog> resultLogs = (List<MaintenanceLog>) result.get("maintenanceLogs");
-        assertEquals(1, resultLogs.size());
-        verify(repository, times(1)).findById(1L);
-        verify(maintenanceLogRepository, times(1)).findByItem(1L);
-    }
-
-    @Test
-    public void testGetWithLogsReturnsNullWhenNotFound() {
-        when(repository.findById(999L)).thenReturn(null);
-
-        Map<String, Object> result = service.getWithLogs(999L);
-
-        assertEquals(null, result);
-        verify(repository, times(1)).findById(999L);
-        verify(maintenanceLogRepository, never()).findByItem(any());
-    }
-
-    @Test
-    public void testUpdateStatusWhenLocomotiveNotFound() {
-        when(repository.findById(999L)).thenReturn(null);
-
-        service.updateStatus(999L, MaintenanceStatus.IN_MAINTENANCE);
-
-        verify(repository, times(1)).findById(999L);
-        verify(repository, never()).update(any(), any());
-    }
-
-    @Test
-    public void testUpdateReturnsNullWhenNotFound() {
-        when(repository.update(eq(999L), any(Locomotive.class))).thenReturn(null);
-
-        Locomotive input = new Locomotive();
-        input.manufacturer = "Test";
-
-        Locomotive result = service.update(999L, input);
-
-        assertEquals(null, result);
-        verify(repository, times(1)).update(eq(999L), any(Locomotive.class));
+    private CreateLocomotiveRequest createLocomotiveRequest() {
+        CreateLocomotiveRequest request = new CreateLocomotiveRequest();
+        request.setManufacturer("Athearn");
+        request.setModelNumber("RTR-87901");
+        request.setScale(Scale.HO);
+        request.setRoadName("Union Pacific");
+        request.setColor("Yellow/Gray");
+        request.setDescription("SD70M Locomotive");
+        request.setPurchasePrice(new BigDecimal("189.99"));
+        request.setPurchaseDate(LocalDate.of(2024, 1, 15));
+        request.setCurrentValue(new BigDecimal("189.99"));
+        request.setNotes("DCC Ready");
+        request.setMaintenanceStatus(MaintenanceStatus.OPERATIONAL);
+        request.setLocomotiveType(LocomotiveType.DIESEL);
+        request.setPowerType(PowerType.DCC_SOUND);
+        request.setRoadNumber("4141");
+        return request;
     }
 }

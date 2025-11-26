@@ -1,158 +1,129 @@
 package com.softwareascraft.practice.repository;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.softwareascraft.practice.enums.AARType;
+import com.softwareascraft.practice.enums.MaintenanceStatus;
+import com.softwareascraft.practice.enums.Scale;
+import com.softwareascraft.practice.exception.ResourceNotFoundException;
 import com.softwareascraft.practice.model.RollingStock;
-import org.springframework.stereotype.Repository;
+import com.softwareascraft.practice.util.IdGenerator;
+import com.softwareascraft.practice.util.JsonFileManager;
 
-import java.io.File;
-import java.io.IOException;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
-@Repository
+/**
+ * Repository for RollingStock entities (ANTI-PATTERN for teaching purposes)
+ * - Hard-coded file path
+ * - Direct calls to static utility methods
+ * - No interface abstraction
+ * - Cannot be easily mocked or substituted
+ */
 public class RollingStockRepository {
 
-    private String path = "data/rolling-stock.json";
+    // Hard-coded file name (ANTI-PATTERN)
+    private static final String FILE_NAME = "rolling-stock.json";
+    private static final String ENTITY_TYPE = "rolling_stock";
+
+    public RollingStockRepository() {
+        // Initialize ID counter from existing data
+        List<RollingStock> existing = findAll();
+        IdGenerator.initializeCounter(ENTITY_TYPE, existing);
+    }
+
+    public RollingStock save(RollingStock rollingStock) {
+        List<RollingStock> rollingStocks = findAll();
+
+        // Generate new ID using static utility (ANTI-PATTERN)
+        Long newId = IdGenerator.generateId(ENTITY_TYPE);
+        rollingStock.setId(newId);
+
+        rollingStocks.add(rollingStock);
+
+        // Call static utility method directly (ANTI-PATTERN)
+        JsonFileManager.writeToFile(FILE_NAME, rollingStocks);
+
+        return rollingStock;
+    }
+
+    public Optional<RollingStock> findById(Long id) {
+        List<RollingStock> rollingStocks = findAll();
+        return rollingStocks.stream()
+                .filter(rs -> rs.getId().equals(id))
+                .findFirst();
+    }
 
     public List<RollingStock> findAll() {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new JavaTimeModule());
-        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-
-        try {
-            File f = new File(path);
-            if (!f.exists()) {
-                return new ArrayList<>();
-            }
-            List<RollingStock> list = mapper.readValue(f, new TypeReference<List<RollingStock>>() {});
-            return list;
-        } catch (IOException e) {
-            e.printStackTrace();
-            return new ArrayList<>();
-        }
+        // Call static utility method directly (ANTI-PATTERN)
+        return JsonFileManager.readFromFile(FILE_NAME, new TypeReference<List<RollingStock>>() {});
     }
 
-    public RollingStock findById(Long id) {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new JavaTimeModule());
-        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+    public RollingStock update(Long id, RollingStock updatedRollingStock) {
+        List<RollingStock> rollingStocks = findAll();
 
-        try {
-            File f = new File(path);
-            if (!f.exists()) {
-                return null;
+        boolean found = false;
+        for (int i = 0; i < rollingStocks.size(); i++) {
+            if (rollingStocks.get(i).getId().equals(id)) {
+                updatedRollingStock.setId(id);
+                rollingStocks.set(i, updatedRollingStock);
+                found = true;
+                break;
             }
-            List<RollingStock> list = mapper.readValue(f, new TypeReference<List<RollingStock>>() {});
-            for (int i = 0; i < list.size(); i++) {
-                if (list.get(i).id.equals(id)) {
-                    return list.get(i);
-                }
-            }
-            return null;
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
         }
-    }
 
-    public RollingStock save(RollingStock rs) {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new JavaTimeModule());
-        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        mapper.enable(SerializationFeature.INDENT_OUTPUT);
-
-        try {
-            File f = new File(path);
-            List<RollingStock> list = new ArrayList<>();
-
-            if (f.exists()) {
-                list = mapper.readValue(f, new TypeReference<List<RollingStock>>() {});
-            } else {
-                f.getParentFile().mkdirs();
-                f.createNewFile();
-            }
-
-            long max = 0;
-            for (int i = 0; i < list.size(); i++) {
-                if (list.get(i).id > max) {
-                    max = list.get(i).id;
-                }
-            }
-            rs.id = max + 1;
-            rs.createdDate = LocalDateTime.now();
-            rs.lastModifiedDate = LocalDateTime.now();
-
-            list.add(rs);
-            mapper.writeValue(f, list);
-            return rs;
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
+        if (!found) {
+            throw new ResourceNotFoundException("RollingStock", id);
         }
-    }
 
-    public RollingStock update(Long id, RollingStock rs) {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new JavaTimeModule());
-        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        mapper.enable(SerializationFeature.INDENT_OUTPUT);
+        // Call static utility method directly (ANTI-PATTERN)
+        JsonFileManager.writeToFile(FILE_NAME, rollingStocks);
 
-        try {
-            File f = new File(path);
-            List<RollingStock> list = mapper.readValue(f, new TypeReference<List<RollingStock>>() {});
-
-            for (int i = 0; i < list.size(); i++) {
-                if (list.get(i).id.equals(id)) {
-                    rs.id = id;
-                    rs.createdDate = list.get(i).createdDate;
-                    rs.lastModifiedDate = LocalDateTime.now();
-                    list.set(i, rs);
-                    mapper.writeValue(f, list);
-                    return rs;
-                }
-            }
-            return null;
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
-        }
+        return updatedRollingStock;
     }
 
     public void deleteById(Long id) {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new JavaTimeModule());
-        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        mapper.enable(SerializationFeature.INDENT_OUTPUT);
+        List<RollingStock> rollingStocks = findAll();
 
-        try {
-            File f = new File(path);
-            List<RollingStock> list = mapper.readValue(f, new TypeReference<List<RollingStock>>() {});
+        boolean removed = rollingStocks.removeIf(rs -> rs.getId().equals(id));
 
-            for (int i = 0; i < list.size(); i++) {
-                if (list.get(i).id.equals(id)) {
-                    list.remove(i);
-                    break;
-                }
-            }
-            mapper.writeValue(f, list);
-        } catch (IOException e) {
-            e.printStackTrace();
+        if (!removed) {
+            throw new ResourceNotFoundException("RollingStock", id);
         }
+
+        // Call static utility method directly (ANTI-PATTERN)
+        JsonFileManager.writeToFile(FILE_NAME, rollingStocks);
     }
 
-    public List<RollingStock> findByAarType(AARType type) {
-        List<RollingStock> all = findAll();
-        List<RollingStock> result = new ArrayList<>();
-        for (int i = 0; i < all.size(); i++) {
-            if (all.get(i).aarType == type) {
-                result.add(all.get(i));
-            }
-        }
-        return result;
+    public List<RollingStock> findByManufacturer(String manufacturer) {
+        return findAll().stream()
+                .filter(rs -> rs.getManufacturer() != null &&
+                            rs.getManufacturer().equalsIgnoreCase(manufacturer))
+                .collect(Collectors.toList());
+    }
+
+    public List<RollingStock> findByScale(Scale scale) {
+        return findAll().stream()
+                .filter(rs -> rs.getScale() == scale)
+                .collect(Collectors.toList());
+    }
+
+    public List<RollingStock> findByMaintenanceStatus(MaintenanceStatus status) {
+        return findAll().stream()
+                .filter(rs -> rs.getMaintenanceStatus() == status)
+                .collect(Collectors.toList());
+    }
+
+    public List<RollingStock> findByRoadName(String roadName) {
+        return findAll().stream()
+                .filter(rs -> rs.getRoadName() != null &&
+                            rs.getRoadName().equalsIgnoreCase(roadName))
+                .collect(Collectors.toList());
+    }
+
+    public List<RollingStock> findByAarType(AARType aarType) {
+        return findAll().stream()
+                .filter(rs -> rs.getAarType() == aarType)
+                .collect(Collectors.toList());
     }
 }

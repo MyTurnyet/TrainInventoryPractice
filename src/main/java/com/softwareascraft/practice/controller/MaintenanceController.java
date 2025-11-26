@@ -1,51 +1,63 @@
 package com.softwareascraft.practice.controller;
 
-import com.softwareascraft.practice.enums.MaintenanceStatus;
-import com.softwareascraft.practice.model.MaintenanceLog;
+import com.softwareascraft.practice.dto.request.CreateMaintenanceLogRequest;
+import com.softwareascraft.practice.dto.request.UpdateMaintenanceStatusRequest;
+import com.softwareascraft.practice.dto.response.MaintenanceLogResponse;
 import com.softwareascraft.practice.service.MaintenanceService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
+/**
+ * REST Controller for Maintenance endpoints (ANTI-PATTERN for teaching purposes)
+ * - Creates service with 'new' instead of @Autowired
+ * - Tightly coupled to concrete service implementation
+ * - Cannot be easily tested with mocked dependencies
+ */
 @RestController
 @RequestMapping("/api/maintenance")
 public class MaintenanceController {
 
-    private MaintenanceService service = new MaintenanceService();
+    // Direct instantiation - ANTI-PATTERN (should use @Autowired)
+    private final MaintenanceService maintenanceService;
+
+    public MaintenanceController() {
+        // Creating dependency with 'new' instead of injection (ANTI-PATTERN)
+        this.maintenanceService = new MaintenanceService();
+    }
 
     @PostMapping
-    public ResponseEntity<MaintenanceLog> create(@RequestBody MaintenanceLog log) {
-        MaintenanceLog result = service.create(log);
-        return ResponseEntity.ok(result);
+    public ResponseEntity<MaintenanceLogResponse> createMaintenanceLog(
+            @RequestBody CreateMaintenanceLogRequest request) {
+        MaintenanceLogResponse response = maintenanceService.createMaintenanceLog(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<MaintenanceLog> getById(@PathVariable Long id) {
-        MaintenanceLog result = service.getById(id);
-        if (result == null) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(result);
+    public ResponseEntity<MaintenanceLogResponse> getMaintenanceLogById(@PathVariable Long id) {
+        MaintenanceLogResponse response = maintenanceService.getMaintenanceLogById(id);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/item/{itemId}")
-    public ResponseEntity<List<MaintenanceLog>> getByItemId(@PathVariable Long itemId) {
-        return ResponseEntity.ok(service.getByItemId(itemId));
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        service.delete(id);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<List<MaintenanceLogResponse>> getMaintenanceLogsByItemId(@PathVariable Long itemId) {
+        List<MaintenanceLogResponse> responses = maintenanceService.getMaintenanceLogsByItemId(itemId);
+        return ResponseEntity.ok(responses);
     }
 
     @PutMapping("/status/{itemId}")
-    public ResponseEntity<Void> updateStatus(@PathVariable Long itemId, @RequestBody Map<String, String> body) {
-        String statusStr = body.get("status");
-        MaintenanceStatus status = MaintenanceStatus.valueOf(statusStr);
-        service.updateItemStatus(itemId, status);
+    public ResponseEntity<Void> updateMaintenanceStatus(
+            @PathVariable Long itemId,
+            @RequestBody UpdateMaintenanceStatusRequest request) {
+        maintenanceService.updateMaintenanceStatus(itemId, request.getMaintenanceStatus());
         return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteMaintenanceLog(@PathVariable Long id) {
+        maintenanceService.deleteMaintenanceLog(id);
+        return ResponseEntity.noContent().build();
     }
 }

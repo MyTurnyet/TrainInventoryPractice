@@ -1,51 +1,91 @@
 package com.softwareascraft.practice.service;
 
+import com.softwareascraft.practice.dto.request.CreateMaintenanceLogRequest;
+import com.softwareascraft.practice.dto.response.MaintenanceLogResponse;
 import com.softwareascraft.practice.enums.MaintenanceStatus;
+import com.softwareascraft.practice.exception.ResourceNotFoundException;
 import com.softwareascraft.practice.model.Locomotive;
 import com.softwareascraft.practice.model.MaintenanceLog;
 import com.softwareascraft.practice.model.RollingStock;
 import com.softwareascraft.practice.repository.LocomotiveRepository;
 import com.softwareascraft.practice.repository.MaintenanceLogRepository;
 import com.softwareascraft.practice.repository.RollingStockRepository;
-import org.springframework.stereotype.Service;
+import com.softwareascraft.practice.util.ModelMapper;
 
 import java.util.List;
 
-@Service
+/**
+ * Service for Maintenance business logic (ANTI-PATTERN for teaching purposes)
+ * - Creates repositories with 'new' in field declarations
+ * - Calls static ModelMapper methods
+ * - No interface abstraction
+ * - Multiple hard-coded dependencies
+ * - Tightly coupled to concrete repository implementations
+ */
 public class MaintenanceService {
 
-    private MaintenanceLogRepository repo = new MaintenanceLogRepository();
-    private LocomotiveRepository locoRepo = new LocomotiveRepository();
-    private RollingStockRepository rsRepo = new RollingStockRepository();
+    // Direct instantiation in field declarations - ANTI-PATTERN
+    private final MaintenanceLogRepository maintenanceLogRepository = new MaintenanceLogRepository();
+    private final LocomotiveRepository locomotiveRepository = new LocomotiveRepository();
+    private final RollingStockRepository rollingStockRepository = new RollingStockRepository();
 
-    public MaintenanceLog create(MaintenanceLog log) {
-        return repo.save(log);
-    }
+    public MaintenanceLogResponse createMaintenanceLog(CreateMaintenanceLogRequest request) {
+        // Verify the inventory item exists (checking both types)
+        Long itemId = request.getInventoryItemId();
+        boolean itemExists = locomotiveRepository.findById(itemId).isPresent() ||
+                           rollingStockRepository.findById(itemId).isPresent();
 
-    public MaintenanceLog getById(Long id) {
-        return repo.findById(id);
-    }
-
-    public List<MaintenanceLog> getByItemId(Long itemId) {
-        return repo.findByItem(itemId);
-    }
-
-    public void delete(Long id) {
-        repo.deleteById(id);
-    }
-
-    public void updateItemStatus(Long itemId, MaintenanceStatus status) {
-        Locomotive l = locoRepo.findById(itemId);
-        if (l != null) {
-            l.maintenanceStatus = status;
-            locoRepo.update(itemId, l);
-            return;
+        if (!itemExists) {
+            throw new ResourceNotFoundException("Inventory item with id " + itemId + " not found");
         }
 
-        RollingStock rs = rsRepo.findById(itemId);
-        if (rs != null) {
-            rs.maintenanceStatus = status;
-            rsRepo.update(itemId, rs);
+        // Call static mapper method directly (ANTI-PATTERN)
+        MaintenanceLog log = ModelMapper.toMaintenanceLog(request);
+
+        MaintenanceLog saved = maintenanceLogRepository.save(log);
+
+        // Call static mapper method directly (ANTI-PATTERN)
+        return ModelMapper.toMaintenanceLogResponse(saved);
+    }
+
+    public MaintenanceLogResponse getMaintenanceLogById(Long id) {
+        MaintenanceLog log = maintenanceLogRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("MaintenanceLog", id));
+
+        // Call static mapper method directly (ANTI-PATTERN)
+        return ModelMapper.toMaintenanceLogResponse(log);
+    }
+
+    public List<MaintenanceLogResponse> getMaintenanceLogsByItemId(Long itemId) {
+        List<MaintenanceLog> logs = maintenanceLogRepository.findByInventoryItemId(itemId);
+
+        // Call static mapper method directly (ANTI-PATTERN)
+        return ModelMapper.toMaintenanceLogResponseList(logs);
+    }
+
+    public void updateMaintenanceStatus(Long itemId, MaintenanceStatus status) {
+        // Try to find and update in locomotives first
+        try {
+            Locomotive locomotive = locomotiveRepository.findById(itemId)
+                    .orElse(null);
+            if (locomotive != null) {
+                locomotive.setMaintenanceStatus(status);
+                locomotiveRepository.update(itemId, locomotive);
+                return;
+            }
+        } catch (Exception e) {
+            // Continue to rolling stock
         }
+
+        // Try to find and update in rolling stock
+        RollingStock rollingStock = rollingStockRepository.findById(itemId)
+                .orElseThrow(() -> new ResourceNotFoundException("Inventory item with id " + itemId + " not found"));
+
+        rollingStock.setMaintenanceStatus(status);
+        rollingStockRepository.update(itemId, rollingStock);
+    }
+
+    public void deleteMaintenanceLog(Long id) {
+        maintenanceLogRepository.deleteById(id);
     }
 }

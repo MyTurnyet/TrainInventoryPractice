@@ -1,224 +1,189 @@
 package com.softwareascraft.practice.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.softwareascraft.practice.dto.request.CreateRollingStockRequest;
+import com.softwareascraft.practice.dto.request.UpdateRollingStockRequest;
 import com.softwareascraft.practice.enums.AARType;
+import com.softwareascraft.practice.enums.MaintenanceStatus;
 import com.softwareascraft.practice.enums.Scale;
-import com.softwareascraft.practice.model.RollingStock;
-import com.softwareascraft.practice.service.RollingStockService;
+import com.softwareascraft.practice.util.IdGenerator;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.io.File;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@ExtendWith(MockitoExtension.class)
-public class RollingStockControllerTest {
+/**
+ * Controller test with real service and repository (ANTI-PATTERN for teaching purposes)
+ * - Cannot easily mock the service (created with 'new' in controller)
+ * - Full integration test touching file system
+ * - Slow execution
+ * - Hard to test edge cases
+ */
+@SpringBootTest
+@AutoConfigureMockMvc
+class RollingStockControllerTest {
 
-    @Mock
-    private RollingStockService service;
+    @Autowired
+    private MockMvc mockMvc;
 
-    @InjectMocks
-    private RollingStockController controller;
+    private ObjectMapper objectMapper;
+    private static final String DATA_DIR = "data/";
+    private static final String TEST_FILE = "rolling-stock.json";
 
     @BeforeEach
-    public void setup() {
-        // Mocks are initialized by @ExtendWith(MockitoExtension.class)
+    void setUp() {
+        objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        IdGenerator.resetIdCounter("rolling_stock");
+    }
+
+    @AfterEach
+    void tearDown() {
+        File dataFile = new File(DATA_DIR + TEST_FILE);
+        if (dataFile.exists()) {
+            dataFile.delete();
+        }
+        IdGenerator.resetIdCounter("rolling_stock");
     }
 
     @Test
-    public void testCreate() {
-        RollingStock rs = new RollingStock();
-        rs.manufacturer = "Walthers";
-        rs.scale = Scale.HO;
-        rs.aarType = AARType.XM;
-        rs.carType = "Box Car";
+    void testCreateRollingStock() throws Exception {
+        CreateRollingStockRequest request = createRollingStockRequest();
 
-        RollingStock saved = new RollingStock();
-        saved.id = 1L;
-        saved.manufacturer = "Walthers";
-        saved.scale = Scale.HO;
-        saved.aarType = AARType.XM;
-        saved.carType = "Box Car";
-
-        when(service.create(any(RollingStock.class))).thenReturn(saved);
-
-        ResponseEntity<RollingStock> response = controller.create(rs);
-
-        assertEquals(200, response.getStatusCodeValue());
-        assertNotNull(response.getBody().id);
-        verify(service, times(1)).create(any(RollingStock.class));
+        mockMvc.perform(post("/api/rolling-stock")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").isNumber())
+                .andExpect(jsonPath("$.manufacturer").value("Walthers"))
+                .andExpect(jsonPath("$.scale").value("HO"));
     }
 
     @Test
-    public void test2() {
-        Map<String, Object> rsData = new HashMap<>();
-        rsData.put("id", 1L);
-        rsData.put("manufacturer", "Test");
-        rsData.put("scale", Scale.N);
+    void testGetRollingStockById() throws Exception {
+        CreateRollingStockRequest request = createRollingStockRequest();
 
-        when(service.getWithLogs(1L)).thenReturn(rsData);
+        String createResponse = mockMvc.perform(post("/api/rolling-stock")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andReturn().getResponse().getContentAsString();
 
-        ResponseEntity<Map<String, Object>> response = controller.getById(1L);
+        Long id = objectMapper.readTree(createResponse).get("id").asLong();
 
-        assertEquals(200, response.getStatusCodeValue());
-        assertNotNull(response.getBody());
-        verify(service, times(1)).getWithLogs(1L);
+        mockMvc.perform(get("/api/rolling-stock/" + id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(id))
+                .andExpect(jsonPath("$.manufacturer").value("Walthers"));
     }
 
     @Test
-    public void testGetByIdReturnsNotFoundWhenNull() {
-        when(service.getWithLogs(999L)).thenReturn(null);
-
-        ResponseEntity<Map<String, Object>> response = controller.getById(999L);
-
-        assertEquals(404, response.getStatusCodeValue());
-        verify(service, times(1)).getWithLogs(999L);
+    void testGetRollingStockById_NotFound() throws Exception {
+        mockMvc.perform(get("/api/rolling-stock/999"))
+                .andExpect(status().isNotFound());
     }
 
     @Test
-    public void testGetAll() {
-        List<RollingStock> list = new ArrayList<>();
+    void testGetAllRollingStock() throws Exception {
+        CreateRollingStockRequest request1 = createRollingStockRequest();
+        CreateRollingStockRequest request2 = createRollingStockRequest();
 
-        RollingStock rs1 = new RollingStock();
-        rs1.id = 1L;
-        rs1.manufacturer = "Test1";
-        list.add(rs1);
+        mockMvc.perform(post("/api/rolling-stock")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request1)));
 
-        RollingStock rs2 = new RollingStock();
-        rs2.id = 2L;
-        rs2.manufacturer = "Test2";
-        list.add(rs2);
+        mockMvc.perform(post("/api/rolling-stock")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request2)));
 
-        when(service.getAll()).thenReturn(list);
-
-        ResponseEntity<List<RollingStock>> response = controller.getAll();
-
-        assertEquals(200, response.getStatusCodeValue());
-        assertEquals(2, response.getBody().size());
-        verify(service, times(1)).getAll();
+        mockMvc.perform(get("/api/rolling-stock"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2));
     }
 
     @Test
-    public void testUpdate() {
-        RollingStock updated = new RollingStock();
-        updated.id = 1L;
-        updated.manufacturer = "Updated";
+    void testUpdateRollingStock() throws Exception {
+        CreateRollingStockRequest createRequest = createRollingStockRequest();
 
-        when(service.update(eq(1L), any(RollingStock.class))).thenReturn(updated);
+        String createResponse = mockMvc.perform(post("/api/rolling-stock")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(createRequest)))
+                .andReturn().getResponse().getContentAsString();
 
-        RollingStock input = new RollingStock();
-        input.manufacturer = "Updated";
+        Long id = objectMapper.readTree(createResponse).get("id").asLong();
 
-        ResponseEntity<RollingStock> response = controller.update(1L, input);
+        UpdateRollingStockRequest updateRequest = new UpdateRollingStockRequest();
+        updateRequest.setManufacturer("Updated Manufacturer");
+        updateRequest.setModelNumber("NEW-MODEL");
+        updateRequest.setScale(Scale.N);
+        updateRequest.setRoadName("Updated Road");
+        updateRequest.setColor("Red");
+        updateRequest.setDescription("Updated Description");
+        updateRequest.setPurchasePrice(new BigDecimal("49.99"));
+        updateRequest.setPurchaseDate(LocalDate.now());
+        updateRequest.setCurrentValue(new BigDecimal("49.99"));
+        updateRequest.setNotes("Updated notes");
+        updateRequest.setMaintenanceStatus(MaintenanceStatus.OPERATIONAL);
+        updateRequest.setAarType(AARType.XM);
+        updateRequest.setCarType("Box Car");
+        updateRequest.setRoadNumber("8888");
+        updateRequest.setCapacity("40 foot");
 
-        assertEquals(200, response.getStatusCodeValue());
-        assertEquals("Updated", response.getBody().manufacturer);
-        verify(service, times(1)).update(eq(1L), any(RollingStock.class));
+        mockMvc.perform(put("/api/rolling-stock/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.manufacturer").value("Updated Manufacturer"))
+                .andExpect(jsonPath("$.scale").value("N"));
     }
 
     @Test
-    public void testUpdateReturnsNotFoundWhenNull() {
-        when(service.update(eq(999L), any(RollingStock.class))).thenReturn(null);
+    void testDeleteRollingStock() throws Exception {
+        CreateRollingStockRequest request = createRollingStockRequest();
 
-        RollingStock input = new RollingStock();
-        input.manufacturer = "Test";
+        String createResponse = mockMvc.perform(post("/api/rolling-stock")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andReturn().getResponse().getContentAsString();
 
-        ResponseEntity<RollingStock> response = controller.update(999L, input);
+        Long id = objectMapper.readTree(createResponse).get("id").asLong();
 
-        assertEquals(404, response.getStatusCodeValue());
-        verify(service, times(1)).update(eq(999L), any(RollingStock.class));
+        mockMvc.perform(delete("/api/rolling-stock/" + id))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/rolling-stock/" + id))
+                .andExpect(status().isNotFound());
     }
 
-    @Test
-    public void testDelete() {
-        doNothing().when(service).delete(1L);
-
-        ResponseEntity<Void> response = controller.delete(1L);
-
-        assertEquals(200, response.getStatusCodeValue());
-        verify(service, times(1)).delete(1L);
-    }
-
-    @Test
-    public void testSearch() {
-        Map<String, Object> searchResult = new HashMap<>();
-        List<RollingStock> results = new ArrayList<>();
-
-        RollingStock rs1 = new RollingStock();
-        rs1.id = 1L;
-        rs1.manufacturer = "Athearn";
-        results.add(rs1);
-
-        searchResult.put("results", results);
-        searchResult.put("total", 1);
-
-        when(service.search("Athearn", null, null)).thenReturn(searchResult);
-
-        ResponseEntity<Map<String, Object>> response = controller.search("Athearn", null, null);
-
-        assertEquals(200, response.getStatusCodeValue());
-        Map<String, Object> body = response.getBody();
-        List<RollingStock> resultList = (List<RollingStock>) body.get("results");
-        assertEquals(1, resultList.size());
-        verify(service, times(1)).search("Athearn", null, null);
-    }
-
-    @Test
-    public void testSearchWithMultipleParams() {
-        Map<String, Object> searchResult = new HashMap<>();
-        List<RollingStock> results = new ArrayList<>();
-
-        RollingStock rs1 = new RollingStock();
-        rs1.id = 1L;
-        rs1.manufacturer = "Athearn";
-        rs1.scale = Scale.HO;
-        rs1.aarType = AARType.XM;
-        results.add(rs1);
-
-        searchResult.put("results", results);
-
-        when(service.search("Athearn", Scale.HO, AARType.XM)).thenReturn(searchResult);
-
-        ResponseEntity<Map<String, Object>> response = controller.search("Athearn", Scale.HO, AARType.XM);
-
-        assertEquals(200, response.getStatusCodeValue());
-        verify(service, times(1)).search("Athearn", Scale.HO, AARType.XM);
-    }
-
-    @Test
-    public void testGetByAarType() {
-        List<RollingStock> list = new ArrayList<>();
-
-        RollingStock rs1 = new RollingStock();
-        rs1.id = 1L;
-        rs1.manufacturer = "Test1";
-        rs1.aarType = AARType.XM;
-        list.add(rs1);
-
-        RollingStock rs2 = new RollingStock();
-        rs2.id = 2L;
-        rs2.manufacturer = "Test2";
-        rs2.aarType = AARType.XM;
-        list.add(rs2);
-
-        when(service.getByAarType(AARType.XM)).thenReturn(list);
-
-        ResponseEntity<List<RollingStock>> response = controller.getByAarType(AARType.XM);
-
-        assertEquals(200, response.getStatusCodeValue());
-        assertEquals(2, response.getBody().size());
-        verify(service, times(1)).getByAarType(AARType.XM);
+    private CreateRollingStockRequest createRollingStockRequest() {
+        CreateRollingStockRequest request = new CreateRollingStockRequest();
+        request.setManufacturer("Walthers");
+        request.setModelNumber("910-2961");
+        request.setScale(Scale.HO);
+        request.setRoadName("Santa Fe");
+        request.setColor("Silver/Red");
+        request.setDescription("50' Reefer");
+        request.setPurchasePrice(new BigDecimal("34.99"));
+        request.setPurchaseDate(LocalDate.of(2024, 2, 10));
+        request.setCurrentValue(new BigDecimal("34.99"));
+        request.setNotes("Metal wheels");
+        request.setMaintenanceStatus(MaintenanceStatus.OPERATIONAL);
+        request.setAarType(AARType.RB);
+        request.setCarType("Refrigerator Car");
+        request.setRoadNumber("23456");
+        request.setCapacity("50 foot");
+        return request;
     }
 }

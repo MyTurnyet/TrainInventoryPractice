@@ -1,9 +1,9 @@
-package com.softwareascraft.practice.model;
+package com.softwareascraft.practice.dto.response;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-public class MaintenanceLog {
+public class MaintenanceLogResponse {
     private Long id;
     private Long inventoryItemId;
     private LocalDate maintenanceDate;
@@ -12,10 +12,6 @@ public class MaintenanceLog {
     private String performedBy;
     private String notes;
     private LocalDateTime createdDate;
-
-    public MaintenanceLog() {
-        this.createdDate = LocalDateTime.now();
-    }
 
     public Long getId() {
         return id;

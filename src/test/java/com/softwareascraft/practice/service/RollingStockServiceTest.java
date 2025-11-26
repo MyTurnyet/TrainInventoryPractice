@@ -1,297 +1,175 @@
 package com.softwareascraft.practice.service;
 
+import com.softwareascraft.practice.dto.request.CreateRollingStockRequest;
+import com.softwareascraft.practice.dto.request.UpdateRollingStockRequest;
+import com.softwareascraft.practice.dto.response.RollingStockResponse;
 import com.softwareascraft.practice.enums.AARType;
 import com.softwareascraft.practice.enums.MaintenanceStatus;
 import com.softwareascraft.practice.enums.Scale;
-import com.softwareascraft.practice.model.MaintenanceLog;
-import com.softwareascraft.practice.model.RollingStock;
-import com.softwareascraft.practice.repository.MaintenanceLogRepository;
-import com.softwareascraft.practice.repository.RollingStockRepository;
+import com.softwareascraft.practice.exception.ResourceNotFoundException;
+import com.softwareascraft.practice.util.IdGenerator;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.ArrayList;
+import java.io.File;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
 
-@ExtendWith(MockitoExtension.class)
-public class RollingStockServiceTest {
+/**
+ * Service test with real repository and file I/O (ANTI-PATTERN for teaching purposes)
+ * - Uses real repository instead of mocks
+ * - Slow execution due to file operations
+ * - Hard to isolate failures
+ * - Requires file system cleanup
+ */
+class RollingStockServiceTest {
 
-    @Mock
-    private RollingStockRepository repository;
-
-    @Mock
-    private MaintenanceLogRepository maintenanceLogRepository;
-
-    @InjectMocks
     private RollingStockService service;
+    private static final String DATA_DIR = "data/";
+    private static final String TEST_FILE = "rolling-stock.json";
 
     @BeforeEach
-    public void setup() {
-        // Mocks are initialized by @ExtendWith(MockitoExtension.class)
+    void setUp() {
+        IdGenerator.resetIdCounter("rolling_stock");
+        service = new RollingStockService();
+    }
+
+    @AfterEach
+    void tearDown() {
+        File dataFile = new File(DATA_DIR + TEST_FILE);
+        if (dataFile.exists()) {
+            dataFile.delete();
+        }
+        IdGenerator.resetIdCounter("rolling_stock");
     }
 
     @Test
-    public void test1() {
-        RollingStock rs = new RollingStock();
-        rs.manufacturer = "Walthers";
-        rs.scale = Scale.HO;
-        rs.aarType = AARType.XM;
-        rs.carType = "Box Car";
+    void testCreateRollingStock() {
+        CreateRollingStockRequest request = createRollingStockRequest();
 
-        RollingStock saved = new RollingStock();
-        saved.id = 1L;
-        saved.manufacturer = "Walthers";
-        saved.scale = Scale.HO;
-        saved.aarType = AARType.XM;
-        saved.carType = "Box Car";
+        RollingStockResponse response = service.createRollingStock(request);
 
-        when(repository.save(any(RollingStock.class))).thenReturn(saved);
-
-        RollingStock result = service.create(rs);
-
-        assertNotNull(result);
-        assertNotNull(result.id);
-        verify(repository, times(1)).save(any(RollingStock.class));
+        assertNotNull(response);
+        assertNotNull(response.getId());
+        assertEquals("Walthers", response.getManufacturer());
+        assertEquals(Scale.HO, response.getScale());
+        assertEquals(AARType.RB, response.getAarType());
     }
 
     @Test
-    public void testGetById() {
-        RollingStock rs = new RollingStock();
-        rs.id = 1L;
-        rs.manufacturer = "Test";
-        rs.scale = Scale.N;
-        rs.aarType = AARType.FC;
-        rs.carType = "Flat Car";
+    void testGetRollingStockById() {
+        CreateRollingStockRequest request = createRollingStockRequest();
+        RollingStockResponse created = service.createRollingStock(request);
 
-        when(repository.findById(1L)).thenReturn(rs);
-
-        RollingStock found = service.getById(1L);
+        RollingStockResponse found = service.getRollingStockById(created.getId());
 
         assertNotNull(found);
-        assertEquals("Test", found.manufacturer);
-        verify(repository, times(1)).findById(1L);
+        assertEquals(created.getId(), found.getId());
+        assertEquals("Walthers", found.getManufacturer());
     }
 
     @Test
-    public void testGetAll() {
-        List<RollingStock> list = new ArrayList<>();
-
-        RollingStock rs1 = new RollingStock();
-        rs1.id = 1L;
-        rs1.manufacturer = "Test1";
-        list.add(rs1);
-
-        RollingStock rs2 = new RollingStock();
-        rs2.id = 2L;
-        rs2.manufacturer = "Test2";
-        list.add(rs2);
-
-        when(repository.findAll()).thenReturn(list);
-
-        List<RollingStock> result = service.getAll();
-
-        assertEquals(2, result.size());
-        verify(repository, times(1)).findAll();
+    void testGetRollingStockById_NotFound() {
+        assertThrows(ResourceNotFoundException.class, () ->
+                service.getRollingStockById(999L));
     }
 
     @Test
-    public void testUpdate() {
-        RollingStock updated = new RollingStock();
-        updated.id = 1L;
-        updated.manufacturer = "Updated";
+    void testGetAllRollingStock() {
+        service.createRollingStock(createRollingStockRequest());
+        service.createRollingStock(createRollingStockRequest());
 
-        when(repository.update(eq(1L), any(RollingStock.class))).thenReturn(updated);
+        List<RollingStockResponse> all = service.getAllRollingStock();
 
-        RollingStock result = service.update(1L, updated);
-
-        assertNotNull(result);
-        assertEquals("Updated", result.manufacturer);
-        verify(repository, times(1)).update(eq(1L), any(RollingStock.class));
+        assertEquals(2, all.size());
     }
 
     @Test
-    public void testDelete() {
-        doNothing().when(repository).deleteById(1L);
+    void testUpdateRollingStock() {
+        CreateRollingStockRequest createRequest = createRollingStockRequest();
+        RollingStockResponse created = service.createRollingStock(createRequest);
 
-        service.delete(1L);
+        UpdateRollingStockRequest updateRequest = new UpdateRollingStockRequest();
+        updateRequest.setManufacturer("Updated Manufacturer");
+        updateRequest.setModelNumber("NEW-MODEL");
+        updateRequest.setScale(Scale.N);
+        updateRequest.setRoadName("Updated Road");
+        updateRequest.setColor("Red");
+        updateRequest.setDescription("Updated Description");
+        updateRequest.setPurchasePrice(new BigDecimal("49.99"));
+        updateRequest.setPurchaseDate(LocalDate.now());
+        updateRequest.setCurrentValue(new BigDecimal("49.99"));
+        updateRequest.setNotes("Updated notes");
+        updateRequest.setMaintenanceStatus(MaintenanceStatus.OPERATIONAL);
+        updateRequest.setAarType(AARType.XM);
+        updateRequest.setCarType("Box Car");
+        updateRequest.setRoadNumber("8888");
+        updateRequest.setCapacity("40 foot");
 
-        verify(repository, times(1)).deleteById(1L);
+        RollingStockResponse updated = service.updateRollingStock(created.getId(), updateRequest);
+
+        assertEquals("Updated Manufacturer", updated.getManufacturer());
+        assertEquals("NEW-MODEL", updated.getModelNumber());
+        assertEquals(Scale.N, updated.getScale());
     }
 
     @Test
-    public void testSearch() {
-        List<RollingStock> allRollingStock = new ArrayList<>();
+    void testUpdateRollingStock_NotFound() {
+        UpdateRollingStockRequest request = new UpdateRollingStockRequest();
+        request.setManufacturer("Test");
 
-        RollingStock rs1 = new RollingStock();
-        rs1.id = 1L;
-        rs1.manufacturer = "Athearn";
-        rs1.scale = Scale.HO;
-        rs1.aarType = AARType.XM;
-        allRollingStock.add(rs1);
-
-        RollingStock rs2 = new RollingStock();
-        rs2.id = 2L;
-        rs2.manufacturer = "Walthers";
-        rs2.scale = Scale.N;
-        rs2.aarType = AARType.FC;
-        allRollingStock.add(rs2);
-
-        when(repository.findAll()).thenReturn(allRollingStock);
-
-        Map<String, Object> result = service.search(null, Scale.HO, null);
-        List<RollingStock> list = (List<RollingStock>) result.get("results");
-
-        assertEquals(1, list.size());
-        assertEquals("Athearn", list.get(0).manufacturer);
-        verify(repository, times(1)).findAll();
+        assertThrows(ResourceNotFoundException.class, () ->
+                service.updateRollingStock(999L, request));
     }
 
     @Test
-    public void testSearchByManufacturer() {
-        List<RollingStock> allRollingStock = new ArrayList<>();
+    void testDeleteRollingStock() {
+        CreateRollingStockRequest request = createRollingStockRequest();
+        RollingStockResponse created = service.createRollingStock(request);
 
-        RollingStock rs1 = new RollingStock();
-        rs1.id = 1L;
-        rs1.manufacturer = "Athearn";
-        rs1.scale = Scale.HO;
-        allRollingStock.add(rs1);
+        service.deleteRollingStock(created.getId());
 
-        RollingStock rs2 = new RollingStock();
-        rs2.id = 2L;
-        rs2.manufacturer = "Walthers";
-        rs2.scale = Scale.HO;
-        allRollingStock.add(rs2);
-
-        when(repository.findAll()).thenReturn(allRollingStock);
-
-        Map<String, Object> result = service.search("Athearn", null, null);
-        List<RollingStock> list = (List<RollingStock>) result.get("results");
-
-        assertEquals(1, list.size());
-        assertEquals("Athearn", list.get(0).manufacturer);
+        assertThrows(ResourceNotFoundException.class, () ->
+                service.getRollingStockById(created.getId()));
     }
 
     @Test
-    public void testSearchWithMultipleCriteria() {
-        List<RollingStock> allRollingStock = new ArrayList<>();
+    void testGetRollingStockByManufacturer() {
+        CreateRollingStockRequest request1 = createRollingStockRequest();
+        request1.setManufacturer("Walthers");
+        service.createRollingStock(request1);
 
-        RollingStock rs1 = new RollingStock();
-        rs1.id = 1L;
-        rs1.manufacturer = "Athearn";
-        rs1.scale = Scale.HO;
-        rs1.aarType = AARType.XM;
-        allRollingStock.add(rs1);
+        CreateRollingStockRequest request2 = createRollingStockRequest();
+        request2.setManufacturer("Athearn");
+        service.createRollingStock(request2);
 
-        RollingStock rs2 = new RollingStock();
-        rs2.id = 2L;
-        rs2.manufacturer = "Athearn";
-        rs2.scale = Scale.N;
-        rs2.aarType = AARType.FC;
-        allRollingStock.add(rs2);
+        List<RollingStockResponse> result = service.getRollingStockByManufacturer("Walthers");
 
-        when(repository.findAll()).thenReturn(allRollingStock);
-
-        Map<String, Object> result = service.search("Athearn", Scale.HO, AARType.XM);
-        List<RollingStock> list = (List<RollingStock>) result.get("results");
-
-        assertEquals(1, list.size());
-        assertEquals(Scale.HO, list.get(0).scale);
+        assertEquals(1, result.size());
+        assertEquals("Walthers", result.get(0).getManufacturer());
     }
 
-    @Test
-    public void testGetByAarType() {
-        List<RollingStock> xmList = new ArrayList<>();
-
-        RollingStock rs1 = new RollingStock();
-        rs1.id = 1L;
-        rs1.manufacturer = "Test1";
-        rs1.aarType = AARType.XM;
-        xmList.add(rs1);
-
-        RollingStock rs2 = new RollingStock();
-        rs2.id = 2L;
-        rs2.manufacturer = "Test2";
-        rs2.aarType = AARType.XM;
-        xmList.add(rs2);
-
-        when(repository.findByAarType(AARType.XM)).thenReturn(xmList);
-
-        List<RollingStock> result = service.getByAarType(AARType.XM);
-
-        assertEquals(2, result.size());
-        verify(repository, times(1)).findByAarType(AARType.XM);
-    }
-
-    @Test
-    public void testGetWithLogs() {
-        RollingStock rs = new RollingStock();
-        rs.id = 1L;
-        rs.manufacturer = "Test";
-        rs.scale = Scale.HO;
-        rs.maintenanceStatus = MaintenanceStatus.OPERATIONAL;
-
-        List<MaintenanceLog> logs = new ArrayList<>();
-        MaintenanceLog log = new MaintenanceLog();
-        log.id = 1L;
-        log.inventoryItemId = 1L;
-        log.description = "Test log";
-        logs.add(log);
-
-        when(repository.findById(1L)).thenReturn(rs);
-        when(maintenanceLogRepository.findByItem(1L)).thenReturn(logs);
-
-        Map<String, Object> result = service.getWithLogs(1L);
-
-        assertNotNull(result);
-        assertEquals(1L, result.get("id"));
-        assertEquals("Test", result.get("manufacturer"));
-        List<MaintenanceLog> resultLogs = (List<MaintenanceLog>) result.get("maintenanceLogs");
-        assertEquals(1, resultLogs.size());
-        verify(repository, times(1)).findById(1L);
-        verify(maintenanceLogRepository, times(1)).findByItem(1L);
-    }
-
-    @Test
-    public void testGetWithLogsReturnsNullWhenNotFound() {
-        when(repository.findById(999L)).thenReturn(null);
-
-        Map<String, Object> result = service.getWithLogs(999L);
-
-        assertNull(result);
-        verify(repository, times(1)).findById(999L);
-        verify(maintenanceLogRepository, never()).findByItem(any());
-    }
-
-    @Test
-    public void testGetByIdReturnsNull() {
-        when(repository.findById(999L)).thenReturn(null);
-
-        RollingStock result = service.getById(999L);
-
-        assertNull(result);
-        verify(repository, times(1)).findById(999L);
-    }
-
-    @Test
-    public void testUpdateReturnsNullWhenNotFound() {
-        when(repository.update(eq(999L), any(RollingStock.class))).thenReturn(null);
-
-        RollingStock rs = new RollingStock();
-        rs.manufacturer = "Test";
-
-        RollingStock result = service.update(999L, rs);
-
-        assertNull(result);
-        verify(repository, times(1)).update(eq(999L), any(RollingStock.class));
+    private CreateRollingStockRequest createRollingStockRequest() {
+        CreateRollingStockRequest request = new CreateRollingStockRequest();
+        request.setManufacturer("Walthers");
+        request.setModelNumber("910-2961");
+        request.setScale(Scale.HO);
+        request.setRoadName("Santa Fe");
+        request.setColor("Silver/Red");
+        request.setDescription("50' Reefer");
+        request.setPurchasePrice(new BigDecimal("34.99"));
+        request.setPurchaseDate(LocalDate.of(2024, 2, 10));
+        request.setCurrentValue(new BigDecimal("34.99"));
+        request.setNotes("Metal wheels");
+        request.setMaintenanceStatus(MaintenanceStatus.OPERATIONAL);
+        request.setAarType(AARType.RB);
+        request.setCarType("Refrigerator Car");
+        request.setRoadNumber("23456");
+        request.setCapacity("50 foot");
+        return request;
     }
 }

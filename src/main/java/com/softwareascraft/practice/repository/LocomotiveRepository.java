@@ -1,170 +1,122 @@
 package com.softwareascraft.practice.repository;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.softwareascraft.practice.enums.MaintenanceStatus;
 import com.softwareascraft.practice.enums.Scale;
+import com.softwareascraft.practice.exception.ResourceNotFoundException;
 import com.softwareascraft.practice.model.Locomotive;
-import org.springframework.stereotype.Repository;
+import com.softwareascraft.practice.util.IdGenerator;
+import com.softwareascraft.practice.util.JsonFileManager;
 
-import java.io.File;
-import java.io.IOException;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
-@Repository
+/**
+ * Repository for Locomotive entities (ANTI-PATTERN for teaching purposes)
+ * - Hard-coded file path
+ * - Direct calls to static utility methods
+ * - No interface abstraction
+ * - Cannot be easily mocked or substituted
+ */
 public class LocomotiveRepository {
 
-    private String path = "data/locomotives.json";
+    // Hard-coded file name (ANTI-PATTERN)
+    private static final String FILE_NAME = "locomotives.json";
+    private static final String ENTITY_TYPE = "locomotive";
+
+    public LocomotiveRepository() {
+        // Initialize ID counter from existing data
+        List<Locomotive> existing = findAll();
+        IdGenerator.initializeCounter(ENTITY_TYPE, existing);
+    }
+
+    public Locomotive save(Locomotive locomotive) {
+        List<Locomotive> locomotives = findAll();
+
+        // Generate new ID using static utility (ANTI-PATTERN)
+        Long newId = IdGenerator.generateId(ENTITY_TYPE);
+        locomotive.setId(newId);
+
+        locomotives.add(locomotive);
+
+        // Call static utility method directly (ANTI-PATTERN)
+        JsonFileManager.writeToFile(FILE_NAME, locomotives);
+
+        return locomotive;
+    }
+
+    public Optional<Locomotive> findById(Long id) {
+        List<Locomotive> locomotives = findAll();
+        return locomotives.stream()
+                .filter(l -> l.getId().equals(id))
+                .findFirst();
+    }
 
     public List<Locomotive> findAll() {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new JavaTimeModule());
-        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-
-        try {
-            File f = new File(path);
-            if (!f.exists()) {
-                return new ArrayList<>();
-            }
-            List<Locomotive> list = mapper.readValue(f, new TypeReference<List<Locomotive>>() {});
-            return list;
-        } catch (IOException e) {
-            e.printStackTrace();
-            return new ArrayList<>();
-        }
+        // Call static utility method directly (ANTI-PATTERN)
+        return JsonFileManager.readFromFile(FILE_NAME, new TypeReference<List<Locomotive>>() {});
     }
 
-    public Locomotive findById(Long id) {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new JavaTimeModule());
-        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+    public Locomotive update(Long id, Locomotive updatedLocomotive) {
+        List<Locomotive> locomotives = findAll();
 
-        try {
-            File f = new File(path);
-            if (!f.exists()) {
-                return null;
+        boolean found = false;
+        for (int i = 0; i < locomotives.size(); i++) {
+            if (locomotives.get(i).getId().equals(id)) {
+                updatedLocomotive.setId(id);
+                locomotives.set(i, updatedLocomotive);
+                found = true;
+                break;
             }
-            List<Locomotive> list = mapper.readValue(f, new TypeReference<List<Locomotive>>() {});
-            for (int i = 0; i < list.size(); i++) {
-                if (list.get(i).id.equals(id)) {
-                    return list.get(i);
-                }
-            }
-            return null;
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
         }
-    }
 
-    public Locomotive save(Locomotive l) {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new JavaTimeModule());
-        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        mapper.enable(SerializationFeature.INDENT_OUTPUT);
-
-        try {
-            File f = new File(path);
-            List<Locomotive> list = new ArrayList<>();
-
-            if (f.exists()) {
-                list = mapper.readValue(f, new TypeReference<List<Locomotive>>() {});
-            } else {
-                f.getParentFile().mkdirs();
-                f.createNewFile();
-            }
-
-            long max = 0;
-            for (int i = 0; i < list.size(); i++) {
-                if (list.get(i).id > max) {
-                    max = list.get(i).id;
-                }
-            }
-            l.id = max + 1;
-            l.createdDate = LocalDateTime.now();
-            l.lastModifiedDate = LocalDateTime.now();
-
-            list.add(l);
-            mapper.writeValue(f, list);
-            return l;
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
+        if (!found) {
+            throw new ResourceNotFoundException("Locomotive", id);
         }
-    }
 
-    public Locomotive update(Long id, Locomotive l) {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new JavaTimeModule());
-        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        mapper.enable(SerializationFeature.INDENT_OUTPUT);
+        // Call static utility method directly (ANTI-PATTERN)
+        JsonFileManager.writeToFile(FILE_NAME, locomotives);
 
-        try {
-            File f = new File(path);
-            List<Locomotive> list = mapper.readValue(f, new TypeReference<List<Locomotive>>() {});
-
-            for (int i = 0; i < list.size(); i++) {
-                if (list.get(i).id.equals(id)) {
-                    l.id = id;
-                    l.createdDate = list.get(i).createdDate;
-                    l.lastModifiedDate = LocalDateTime.now();
-                    list.set(i, l);
-                    mapper.writeValue(f, list);
-                    return l;
-                }
-            }
-            return null;
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
-        }
+        return updatedLocomotive;
     }
 
     public void deleteById(Long id) {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new JavaTimeModule());
-        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        mapper.enable(SerializationFeature.INDENT_OUTPUT);
+        List<Locomotive> locomotives = findAll();
 
-        try {
-            File f = new File(path);
-            List<Locomotive> list = mapper.readValue(f, new TypeReference<List<Locomotive>>() {});
+        boolean removed = locomotives.removeIf(l -> l.getId().equals(id));
 
-            for (int i = 0; i < list.size(); i++) {
-                if (list.get(i).id.equals(id)) {
-                    list.remove(i);
-                    break;
-                }
-            }
-            mapper.writeValue(f, list);
-        } catch (IOException e) {
-            e.printStackTrace();
+        if (!removed) {
+            throw new ResourceNotFoundException("Locomotive", id);
         }
+
+        // Call static utility method directly (ANTI-PATTERN)
+        JsonFileManager.writeToFile(FILE_NAME, locomotives);
     }
 
-    public List<Locomotive> findByScale(Scale s) {
-        List<Locomotive> all = findAll();
-        List<Locomotive> result = new ArrayList<>();
-        for (int i = 0; i < all.size(); i++) {
-            if (all.get(i).scale == s) {
-                result.add(all.get(i));
-            }
-        }
-        return result;
+    public List<Locomotive> findByManufacturer(String manufacturer) {
+        return findAll().stream()
+                .filter(l -> l.getManufacturer() != null &&
+                           l.getManufacturer().equalsIgnoreCase(manufacturer))
+                .collect(Collectors.toList());
     }
 
-    public List<Locomotive> findByStatus(MaintenanceStatus status) {
-        List<Locomotive> all = findAll();
-        List<Locomotive> result = new ArrayList<>();
-        for (int i = 0; i < all.size(); i++) {
-            if (all.get(i).maintenanceStatus == status) {
-                result.add(all.get(i));
-            }
-        }
-        return result;
+    public List<Locomotive> findByScale(Scale scale) {
+        return findAll().stream()
+                .filter(l -> l.getScale() == scale)
+                .collect(Collectors.toList());
+    }
+
+    public List<Locomotive> findByMaintenanceStatus(MaintenanceStatus status) {
+        return findAll().stream()
+                .filter(l -> l.getMaintenanceStatus() == status)
+                .collect(Collectors.toList());
+    }
+
+    public List<Locomotive> findByRoadName(String roadName) {
+        return findAll().stream()
+                .filter(l -> l.getRoadName() != null &&
+                           l.getRoadName().equalsIgnoreCase(roadName))
+                .collect(Collectors.toList());
     }
 }

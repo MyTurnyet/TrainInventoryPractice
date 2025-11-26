@@ -1,66 +1,69 @@
 package com.softwareascraft.practice.controller;
 
-import com.softwareascraft.practice.enums.AARType;
-import com.softwareascraft.practice.enums.Scale;
-import com.softwareascraft.practice.model.RollingStock;
+import com.softwareascraft.practice.dto.request.CreateRollingStockRequest;
+import com.softwareascraft.practice.dto.request.UpdateRollingStockRequest;
+import com.softwareascraft.practice.dto.response.RollingStockResponse;
 import com.softwareascraft.practice.service.RollingStockService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
+/**
+ * REST Controller for RollingStock endpoints (ANTI-PATTERN for teaching purposes)
+ * - Creates service with 'new' instead of @Autowired
+ * - Tightly coupled to concrete service implementation
+ * - Cannot be easily tested with mocked dependencies
+ */
 @RestController
 @RequestMapping("/api/rolling-stock")
 public class RollingStockController {
 
-    private RollingStockService service = new RollingStockService();
+    // Direct instantiation - ANTI-PATTERN (should use @Autowired)
+    private final RollingStockService rollingStockService;
+
+    public RollingStockController() {
+        // Creating dependency with 'new' instead of injection (ANTI-PATTERN)
+        this.rollingStockService = new RollingStockService();
+    }
 
     @PostMapping
-    public ResponseEntity<RollingStock> create(@RequestBody RollingStock rs) {
-        RollingStock result = service.create(rs);
-        return ResponseEntity.ok(result);
+    public ResponseEntity<RollingStockResponse> createRollingStock(@RequestBody CreateRollingStockRequest request) {
+        RollingStockResponse response = rollingStockService.createRollingStock(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> getById(@PathVariable Long id) {
-        Map<String, Object> result = service.getWithLogs(id);
-        if (result == null) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(result);
+    public ResponseEntity<RollingStockResponse> getRollingStockById(@PathVariable Long id) {
+        RollingStockResponse response = rollingStockService.getRollingStockById(id);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping
-    public ResponseEntity<List<RollingStock>> getAll() {
-        return ResponseEntity.ok(service.getAll());
+    public ResponseEntity<List<RollingStockResponse>> getAllRollingStock() {
+        List<RollingStockResponse> responses = rollingStockService.getAllRollingStock();
+        return ResponseEntity.ok(responses);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<RollingStock> update(@PathVariable Long id, @RequestBody RollingStock rs) {
-        RollingStock result = service.update(id, rs);
-        if (result == null) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(result);
+    public ResponseEntity<RollingStockResponse> updateRollingStock(
+            @PathVariable Long id,
+            @RequestBody UpdateRollingStockRequest request) {
+        RollingStockResponse response = rollingStockService.updateRollingStock(id, request);
+        return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        service.delete(id);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<Void> deleteRollingStock(@PathVariable Long id) {
+        rollingStockService.deleteRollingStock(id);
+        return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/search")
-    public ResponseEntity<Map<String, Object>> search(
-            @RequestParam(required = false) String manufacturer,
-            @RequestParam(required = false) Scale scale,
-            @RequestParam(required = false) AARType aarType) {
-        return ResponseEntity.ok(service.search(manufacturer, scale, aarType));
-    }
-
-    @GetMapping("/aar-type/{aarType}")
-    public ResponseEntity<List<RollingStock>> getByAarType(@PathVariable AARType aarType) {
-        return ResponseEntity.ok(service.getByAarType(aarType));
+    @GetMapping("/manufacturer/{manufacturer}")
+    public ResponseEntity<List<RollingStockResponse>> getRollingStockByManufacturer(
+            @PathVariable String manufacturer) {
+        List<RollingStockResponse> responses = rollingStockService.getRollingStockByManufacturer(manufacturer);
+        return ResponseEntity.ok(responses);
     }
 }
